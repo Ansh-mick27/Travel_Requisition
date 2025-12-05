@@ -10,10 +10,14 @@ export default function Dashboard() {
     const [stats, setStats] = useState({ pending: 0, approved: 0, total: 0 });
 
     useEffect(() => {
-        fetchStats();
-    }, []);
+        if (user) {
+            fetchStats();
+        }
+    }, [user]);
 
     const fetchStats = async () => {
+        if (!user) return;
+
         // Simple stats for the user
         const { data } = await supabase
             .from('requisitions')
