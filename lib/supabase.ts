@@ -8,12 +8,15 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 // Custom storage adapter to avoid "window is not defined" error during SSR/Node execution
 const ExpoStorage = {
   getItem: (key: string) => {
+    if (typeof window === 'undefined') return Promise.resolve(null);
     return AsyncStorage.getItem(key);
   },
   setItem: (key: string, value: string) => {
+    if (typeof window === 'undefined') return Promise.resolve();
     return AsyncStorage.setItem(key, value);
   },
   removeItem: (key: string) => {
+    if (typeof window === 'undefined') return Promise.resolve();
     return AsyncStorage.removeItem(key);
   },
 };
