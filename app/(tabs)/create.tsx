@@ -241,7 +241,11 @@ export default function CreateRequest() {
                     onFocus={() => destination.length >= 3 && setShowSuggestions(true)}
                 />
                 {showSuggestions && suggestions.length > 0 && (
-                    <View style={styles.suggestionsList}>
+                    <ScrollView
+                        style={styles.suggestionsList}
+                        nestedScrollEnabled={true}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         {suggestions.map((item, index) => (
                             <TouchableOpacity
                                 key={index}
@@ -251,7 +255,7 @@ export default function CreateRequest() {
                                 <Text style={styles.suggestionText}>{item.display_name}</Text>
                             </TouchableOpacity>
                         ))}
-                    </View>
+                    </ScrollView>
                 )}
             </View>
 
@@ -328,15 +332,25 @@ const styles = StyleSheet.create({
         color: '#999',
     },
     autocompleteContainer: {
-        zIndex: 10, // Ensure suggestions appear on top
+        zIndex: 10,
+        position: 'relative',
     },
     suggestionsList: {
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
         backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ccc',
-        borderTopWidth: 0,
         borderRadius: 5,
         maxHeight: 200,
+        zIndex: 1000,
+        elevation: 5, // For Android shadow
+        shadowColor: '#000', // For iOS shadow
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
     },
     suggestionItem: {
         padding: 10,
