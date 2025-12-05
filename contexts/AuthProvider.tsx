@@ -1,5 +1,6 @@
 import { Session } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 type UserRole = 'requester' | 'hod' | 'admin' | 'driver' | null;
@@ -61,6 +62,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (error) {
                 console.error('Error fetching profile:', error);
             } else {
+                // Check if user is approved
+                if (data.is_approved === false) {
+                    Alert.alert('Account Pending', 'Your account is waiting for Admin approval. Please contact your administrator.');
+                    await supabase.auth.signOut();
+                    setSession(null);
+                    setUser(null);
+                    setRole(null);
+                    return;
+                }
+
                 setUser(data);
                 setRole(data.role);
             }

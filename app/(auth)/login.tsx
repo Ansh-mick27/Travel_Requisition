@@ -1,8 +1,10 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,17 +20,7 @@ export default function LoginScreen() {
         setLoading(false);
     }
 
-    async function signUpWithEmail() {
-        setLoading(true);
-        const { error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-        });
 
-        if (error) Alert.alert('Error', error.message);
-        else Alert.alert('Success', 'Check your email for the confirmation link!');
-        setLoading(false);
-    }
 
     return (
         <View style={styles.container}>
@@ -64,10 +56,10 @@ export default function LoginScreen() {
             <View style={styles.verticallySpaced}>
                 <TouchableOpacity
                     style={[styles.button, styles.buttonOutline, loading && styles.buttonDisabled]}
-                    onPress={signUpWithEmail}
+                    onPress={() => router.push('/(auth)/signup')}
                     disabled={loading}
                 >
-                    <Text style={styles.buttonOutlineText}>Sign up</Text>
+                    <Text style={styles.buttonOutlineText}>Create Account</Text>
                 </TouchableOpacity>
             </View>
         </View>

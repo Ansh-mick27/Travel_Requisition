@@ -1,5 +1,5 @@
 import { Picker } from '@react-native-picker/picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -31,7 +31,7 @@ export default function ApprovalDetail() {
     const fetchRequestDetails = async () => {
         const { data, error } = await supabase
             .from('requisitions')
-            .select('*, profiles:requester_id(full_name, department, phone_number)')
+            .select('*, profiles:requester_id(full_name, department, phone_number, college_name, hod_name, director_name)')
             .eq('id', id)
             .single();
 
@@ -118,10 +118,14 @@ export default function ApprovalDetail() {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
+            <Stack.Screen options={{ title: 'Review Request', headerShown: true }} />
             <View style={styles.section}>
                 <Text style={styles.label}>Requester</Text>
                 <Text style={styles.value}>{request.profiles?.full_name} ({request.profiles?.department})</Text>
-                <Text style={styles.value}>{request.profiles?.phone_number}</Text>
+                <Text style={styles.value}>College: {request.profiles?.college_name || 'N/A'}</Text>
+                <Text style={styles.value}>HOD: {request.profiles?.hod_name || 'N/A'}</Text>
+                <Text style={styles.value}>Director: {request.profiles?.director_name || 'N/A'}</Text>
+                <Text style={styles.value}>Phone: {request.profiles?.phone_number || 'N/A'}</Text>
             </View>
 
             <View style={styles.section}>

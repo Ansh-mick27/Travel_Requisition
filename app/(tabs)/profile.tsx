@@ -38,6 +38,13 @@ export default function Profile() {
             <Text style={styles.info}>Department: {user?.department || 'N/A'}</Text>
 
             <View style={{ marginTop: 20 }}>
+                {role === 'admin' && (
+                    <Button
+                        title="Manage Pending Users"
+                        onPress={() => router.push('/admin/user_approvals')}
+                    />
+                )}
+                <View style={{ height: 10 }} />
                 <Button title="Sign Out" onPress={handleSignOut} />
             </View>
         </View>
