@@ -1,13 +1,26 @@
-import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import 'react-native-url-polyfill/auto';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
+// Custom storage adapter to avoid "window is not defined" error during SSR/Node execution
+const ExpoStorage = {
+  getItem: (key: string) => {
+    return AsyncStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    return AsyncStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    return AsyncStorage.removeItem(key);
+  },
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: ExpoStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
