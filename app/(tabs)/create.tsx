@@ -22,7 +22,7 @@ export default function CreateRequest() {
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const typingTimeoutRef = useRef<any>(null);
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showPickupTimePicker, setShowPickupTimePicker] = useState(false);
@@ -79,12 +79,25 @@ export default function CreateRequest() {
     };
 
     const handleSubmit = async () => {
+        console.log('handleSubmit called');
+        console.log('Form Data:', { destination, category, pickupDate, pickupTime, dropTime, vehicleType });
+
+        if (!user) {
+            console.error('User is null');
+            Alert.alert('Error', 'User session not found. Please sign out and sign in again.');
+            return;
+        }
+
         if (!destination || !category || !pickupDate || !pickupTime || !dropTime) {
+            console.log('Validation failed: Missing fields');
             Alert.alert('Missing Fields', 'Please fill in all required fields.');
             return;
         }
 
-        if (!validateBuffer()) return;
+        if (!validateBuffer()) {
+            console.log('Validation failed: Buffer check');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -103,10 +116,41 @@ export default function CreateRequest() {
 
             if (error) throw error;
 
-            Alert.alert('Success', 'Requisition submitted successfully!', [
-                { text: 'OK', onPress: () => router.push('/(tabs)/history') }
-            ]);
+            const resetAndRedirect = () => {
+                // Reset form
+                setDestination('');
+                setPurpose('meeting');
+                setPurposeDesc('');
+                setCategory('');
+                setVehicleType('car');
+                setPickupDate(null);
+                setPickupTime(null);
+                setDropTime(null);
+                setSuggestions([]);
+                setShowSuggestions(false);
+
+                // Redirect to History
+                router.replace('/(tabs)/history');
+            };
+
+            if (Platform.OS === 'web') {
+                // Use a small timeout to let the UI update if needed, but mostly just confirm
+                if (window.confirm('Requisition submitted successfully! Click OK to view history.')) {
+                    resetAndRedirect();
+                } else {
+                    resetAndRedirect();
+                }
+            } else {
+                Alert.alert('Success', 'Requisition submitted successfully!', [
+                    {
+                        text: 'OK',
+                        onPress: resetAndRedirect
+                    }
+                ]);
+            }
+
         } catch (error: any) {
+            console.error('Submission error:', error);
             Alert.alert('Error', error.message);
         } finally {
             setLoading(false);

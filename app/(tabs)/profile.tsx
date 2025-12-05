@@ -1,9 +1,34 @@
-import { Button, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { Alert, Button, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../contexts/AuthProvider';
 import { supabase } from '../../lib/supabase';
 
 export default function Profile() {
     const { user, role } = useAuth();
+
+    const handleSignOut = async () => {
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+        } catch (err) {
+            console.error('Sign out error:', err);
+            Alert.alert(
+                "Sign Out Failed",
+                "Could not reach the server. Do you want to force sign out locally?",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "Force Sign Out",
+                        onPress: async () => {
+                            await AsyncStorage.removeItem('supabase-auth-token');
+                            router.replace('/(auth)/login');
+                        }
+                    }
+                ]
+            );
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -13,7 +38,7 @@ export default function Profile() {
             <Text style={styles.info}>Department: {user?.department || 'N/A'}</Text>
 
             <View style={{ marginTop: 20 }}>
-                <Button title="Sign Out" onPress={() => supabase.auth.signOut()} />
+                <Button title="Sign Out" onPress={handleSignOut} />
             </View>
         </View>
     );

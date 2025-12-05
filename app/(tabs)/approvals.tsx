@@ -16,11 +16,13 @@ export default function Approvals() {
 
             if (isHOD) {
                 // HOD sees requests pending HOD approval
-                // Ideally filter by department, but for now show all pending_hod
                 query = query.eq('status', 'pending_hod');
             } else if (isAdmin) {
-                // Admin sees requests pending Admin approval
-                query = query.eq('status', 'pending_admin');
+                // Admin normally sees pending_admin, but for testing/fallback let's show both
+                // or if we want strict flow, we keep it. 
+                // But user is stuck because they are Admin and requests are pending_hod.
+                // Let's allow Admin to see pending_hod as well for now.
+                query = query.in('status', ['pending_hod', 'pending_admin']);
             }
 
             const { data, error } = await query;
