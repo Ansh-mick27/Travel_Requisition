@@ -1,8 +1,12 @@
-import { Picker } from '@react-native-picker/picker'; // You might need to install this: npx expo install @react-native-picker/picker
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AnimatedButton } from '../../components/ui/AnimatedButton';
+import { Card } from '../../components/ui/Card';
 import { COLLEGES } from '../../constants/colleges';
+import { Colors } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
 
 export default function SignupScreen() {
@@ -85,159 +89,194 @@ export default function SignupScreen() {
 
     const currentCollege = COLLEGES.find(c => c.name === selectedCollege);
 
+    const renderInput = (label: string, value: string, setValue: (t: string) => void, placeholder: string, icon: any, secure = false, keyboardType: any = 'default', editable = true) => (
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={[styles.inputContainer, !editable && styles.disabledContainer]}>
+                <Ionicons name={icon} size={20} color={Colors.light.primary} style={styles.icon} />
+                <TextInput
+                    style={[styles.input, !editable && styles.disabledInput]}
+                    onChangeText={setValue}
+                    value={value}
+                    placeholder={placeholder}
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry={secure}
+                    autoCapitalize="none"
+                    keyboardType={keyboardType}
+                    editable={editable}
+                />
+            </View>
+        </View>
+    );
+
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Create Account</Text>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name *</Text>
-                <TextInput style={styles.input} onChangeText={setFullName} value={fullName} placeholder="John Doe" />
-            </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email *</Text>
-                <TextInput style={styles.input} onChangeText={setEmail} value={email} placeholder="email@address.com" autoCapitalize="none" keyboardType="email-address" />
-            </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password *</Text>
-                <TextInput style={styles.input} onChangeText={setPassword} value={password} secureTextEntry placeholder="******" autoCapitalize="none" />
-            </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>College Name *</Text>
-                <View style={styles.pickerContainer}>
-                    <Picker
-                        selectedValue={selectedCollege}
-                        onValueChange={(itemValue) => setSelectedCollege(itemValue)}
-                    >
-                        <Picker.Item label="Select College" value="" />
-                        {COLLEGES.map((college, index) => (
-                            <Picker.Item key={index} label={college.name} value={college.name} />
-                        ))}
-                    </Picker>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.container}
+        >
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.headerContainer}>
+                    <Text style={styles.title}>Create Account</Text>
+                    <Text style={styles.subtitle}>Join Travel Requisition Portal</Text>
                 </View>
-            </View>
 
-            {selectedCollege ? (
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Department *</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={selectedDept}
-                            onValueChange={(itemValue) => setSelectedDept(itemValue)}
-                        >
-                            <Picker.Item label="Select Department" value="" />
-                            {currentCollege?.departments.map((dept, index) => (
-                                <Picker.Item key={index} label={dept.name} value={dept.name} />
-                            ))}
-                        </Picker>
+                <Card title="Personal Details">
+                    {renderInput("Full Name", fullName, setFullName, "John Doe", "person-outline")}
+                    {renderInput("Email Address", email, setEmail, "email@address.com", "mail-outline", false, "email-address")}
+                    {renderInput("Password", password, setPassword, "Create a password", "lock-closed-outline", true)}
+                </Card>
+
+                <Card title="Academic Details">
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>College Name</Text>
+                        <View style={styles.pickerWrapper}>
+                            <Picker
+                                selectedValue={selectedCollege}
+                                onValueChange={(itemValue) => setSelectedCollege(itemValue)}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Select College" value="" />
+                                {COLLEGES.map((college, index) => (
+                                    <Picker.Item key={index} label={college.name} value={college.name} />
+                                ))}
+                            </Picker>
+                        </View>
                     </View>
-                </View>
-            ) : null}
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>HOD Name (Auto-filled)</Text>
-                <TextInput style={[styles.input, styles.disabledInput]} value={hodName} editable={false} />
-            </View>
+                    {selectedCollege ? (
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Department</Text>
+                            <View style={styles.pickerWrapper}>
+                                <Picker
+                                    selectedValue={selectedDept}
+                                    onValueChange={(itemValue) => setSelectedDept(itemValue)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Select Department" value="" />
+                                    {currentCollege?.departments.map((dept, index) => (
+                                        <Picker.Item key={index} label={dept.name} value={dept.name} />
+                                    ))}
+                                </Picker>
+                            </View>
+                        </View>
+                    ) : null}
+                </Card>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Director Name (Auto-filled)</Text>
-                <TextInput style={[styles.input, styles.disabledInput]} value={directorName} editable={false} />
-            </View>
+                {(hodName !== '' || directorName !== '') && (
+                    <Card title="Authority Details">
+                        {renderInput("HOD Name (Auto-filled)", hodName, setHodName, "", "person-circle-outline", false, "default", false)}
+                        {renderInput("Director Name (Auto-filled)", directorName, setDirectorName, "", "school-outline", false, "default", false)}
+                    </Card>
+                )}
 
-            <View style={[styles.verticallySpaced, styles.mt20]}>
-                <TouchableOpacity
-                    style={[styles.button, loading && styles.buttonDisabled]}
+                <AnimatedButton
+                    title={loading ? "Creating Account..." : "Sign Up"}
                     onPress={handleSignUp}
-                    disabled={loading}
-                >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign Up</Text>}
-                </TouchableOpacity>
-            </View>
+                    isLoading={loading}
+                    style={styles.signUpButton}
+                />
 
-            <View style={styles.verticallySpaced}>
-                <TouchableOpacity
-                    style={[styles.button, styles.buttonOutline]}
-                    onPress={() => router.replace('/(auth)/login')}
-                >
-                    <Text style={styles.buttonOutlineText}>Back to Login</Text>
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>Already have an account?</Text>
+                    <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
+                        <Text style={styles.linkText}>Sign In</Text>
+                    </TouchableOpacity>
+                </View>
+
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        padding: 20,
-        paddingTop: 50,
-        paddingBottom: 50,
+        flex: 1,
+        backgroundColor: Colors.light.background,
+    },
+    scrollContent: {
         flexGrow: 1,
-        justifyContent: 'center',
+        padding: 20,
+        paddingTop: 40,
+        paddingBottom: 40,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 30,
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 24,
-        textAlign: 'center',
+        fontSize: 28,
+        fontWeight: '800',
+        color: Colors.light.primary,
+        marginBottom: 8,
     },
-    inputContainer: {
-        marginBottom: 15,
+    subtitle: {
+        fontSize: 16,
+        color: '#64748B',
+    },
+    inputGroup: {
+        marginBottom: 16,
     },
     label: {
-        marginBottom: 5,
-        color: '#666',
-        fontWeight: 'bold',
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#64748B',
+        marginBottom: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        height: 50,
+    },
+    disabledContainer: {
+        backgroundColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
     },
     input: {
-        borderColor: '#ccc',
-        borderWidth: 1,
-        borderRadius: 4,
-        padding: 12,
+        flex: 1,
         fontSize: 16,
-        backgroundColor: '#fff',
+        color: '#1E293B',
     },
     disabledInput: {
-        backgroundColor: '#f0f0f0',
-        color: '#888',
+        color: '#64748B',
     },
-    pickerContainer: {
-        borderColor: '#ccc',
+    icon: {
+        marginRight: 12,
+    },
+    pickerWrapper: {
+        backgroundColor: '#F8FAFC',
         borderWidth: 1,
-        borderRadius: 4,
-        backgroundColor: '#fff',
+        borderColor: '#E2E8F0',
+        borderRadius: 12,
+        marginBottom: 8,
+        overflow: 'hidden', // iOS fix
     },
-    verticallySpaced: {
-        paddingTop: 4,
-        paddingBottom: 4,
-        alignSelf: 'stretch',
+    picker: {
+        height: Platform.OS === 'android' ? 50 : undefined,
     },
-    mt20: {
-        marginTop: 20,
+    signUpButton: {
+        marginBottom: 20,
     },
-    button: {
-        backgroundColor: '#007AFF',
-        padding: 12,
-        borderRadius: 4,
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 20,
+        gap: 8,
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
+    footerText: {
+        fontSize: 15,
+        color: '#64748B',
+    },
+    linkText: {
+        fontSize: 15,
         fontWeight: '600',
-    },
-    buttonDisabled: {
-        opacity: 0.7,
-    },
-    buttonOutline: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: '#007AFF',
-    },
-    buttonOutlineText: {
-        color: '#007AFF',
-        fontSize: 16,
-        fontWeight: '600',
+        color: Colors.light.primary,
     },
 });

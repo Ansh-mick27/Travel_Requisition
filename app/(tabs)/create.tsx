@@ -1,8 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AnimatedButton } from '../../components/ui/AnimatedButton';
+import { Card } from '../../components/ui/Card';
+import { Colors } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthProvider';
 import { supabase } from '../../lib/supabase';
 
@@ -14,13 +18,26 @@ export default function CreateRequest() {
     const [pickupDate, setPickupDate] = useState<Date | null>(null);
     const [pickupTime, setPickupTime] = useState<Date | null>(null);
     const [dropTime, setDropTime] = useState<Date | null>(null);
+
+    // Locations
     const [destination, setDestination] = useState('');
+    const [pickupLocation, setPickupLocation] = useState('');
+
+    // Autocomplete State
+    const [destSuggestions, setDestSuggestions] = useState<any[]>([]);
+    const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
+    const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+    const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
+
     const [purpose, setPurpose] = useState('meeting');
     const [purposeDesc, setPurposeDesc] = useState('');
-    const [category, setCategory] = useState('');
+
+    // Category & Guest Details
+    const [category, setCategory] = useState('In house Staff');
+    const [guestName, setGuestName] = useState('');
+    const [guestPhone, setGuestPhone] = useState('');
+
     const [vehicleType, setVehicleType] = useState('car');
-    const [suggestions, setSuggestions] = useState<any[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
 
     const typingTimeoutRef = useRef<any>(null);
 
@@ -28,41 +45,54 @@ export default function CreateRequest() {
     const [showPickupTimePicker, setShowPickupTimePicker] = useState(false);
     const [showDropTimePicker, setShowDropTimePicker] = useState(false);
 
-    const fetchSuggestions = async (query: string) => {
+    const fetchAddressSuggestions = async (query: string, setSuggestionsFn: (data: any[]) => void, setShowFn: (show: boolean) => void) => {
         if (query.length < 3) {
-            setSuggestions([]);
+            setSuggestionsFn([]);
+            setShowFn(false);
             return;
         }
 
         try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=in`);
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=in`, {
+                headers: {
+                    'User-Agent': 'TravelRequisitionApp/1.0'
+                }
+            });
             const data = await response.json();
-            setSuggestions(data);
-            setShowSuggestions(true);
+            setSuggestionsFn(data);
+            setShowFn(true);
         } catch (error) {
             console.error('Error fetching suggestions:', error);
         }
     };
 
-    const handleDestinationChange = (text: string) => {
-        setDestination(text);
+    const handleLocationChange = (text: string, isPickup: boolean) => {
+        if (isPickup) setPickupLocation(text);
+        else setDestination(text);
 
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
-
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
-            fetchSuggestions(text);
+            fetchAddressSuggestions(
+                text,
+                isPickup ? setPickupSuggestions : setDestSuggestions,
+                isPickup ? setShowPickupSuggestions : setShowDestSuggestions
+            );
         }, 800);
     };
 
-    const selectSuggestion = (item: any) => {
+    const selectSuggestion = (item: any, isPickup: boolean) => {
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
         }
-        setDestination(item.display_name);
-        setSuggestions([]);
-        setShowSuggestions(false);
+        if (isPickup) {
+            setPickupLocation(item.display_name);
+            setPickupSuggestions([]);
+            setShowPickupSuggestions(false);
+        } else {
+            setDestination(item.display_name);
+            setDestSuggestions([]);
+            setShowDestSuggestions(false);
+        }
     };
 
     const validateBuffer = () => {
@@ -79,25 +109,14 @@ export default function CreateRequest() {
     };
 
     const handleSubmit = async () => {
-        console.log('handleSubmit called');
-        console.log('Form Data:', { destination, category, pickupDate, pickupTime, dropTime, vehicleType });
-
-        if (!user) {
-            console.error('User is null');
-            Alert.alert('Error', 'User session not found. Please sign out and sign in again.');
-            return;
+        if (!user) return Alert.alert('Error', 'User session not found.');
+        if (!destination || !pickupLocation || !category || !pickupDate || !pickupTime || !dropTime) {
+            return Alert.alert('Missing Fields', 'Please fill in all required fields.');
         }
-
-        if (!destination || !category || !pickupDate || !pickupTime || !dropTime) {
-            console.log('Validation failed: Missing fields');
-            Alert.alert('Missing Fields', 'Please fill in all required fields.');
-            return;
+        if ((category === 'VIP Guest' || category === 'Guest') && (!guestName || !guestPhone)) {
+            return Alert.alert('Missing details', 'Please provide Guest Name and Phone Number.');
         }
-
-        if (!validateBuffer()) {
-            console.log('Validation failed: Buffer check');
-            return;
-        }
+        if (!validateBuffer()) return;
 
         setLoading(true);
         try {
@@ -107,302 +126,238 @@ export default function CreateRequest() {
                 pickup_time: pickupTime.toLocaleTimeString('en-US', { hour12: false }),
                 drop_time: dropTime.toLocaleTimeString('en-US', { hour12: false }),
                 destination,
+                pickup_location: pickupLocation,
                 purpose,
                 purpose_description: purposeDesc,
                 category,
+                guest_name: guestName,
+                guest_phone: guestPhone,
                 vehicle_type: vehicleType,
                 status: 'pending_hod',
             });
 
             if (error) throw error;
-
-            const resetAndRedirect = () => {
-                // Reset form
-                setDestination('');
-                setPurpose('meeting');
-                setPurposeDesc('');
-                setCategory('');
-                setVehicleType('car');
-                setPickupDate(null);
-                setPickupTime(null);
-                setDropTime(null);
-                setSuggestions([]);
-                setShowSuggestions(false);
-
-                // Redirect to History
-                router.replace('/(tabs)/history');
-            };
-
-            if (Platform.OS === 'web') {
-                // Use a small timeout to let the UI update if needed, but mostly just confirm
-                if (window.confirm('Requisition submitted successfully! Click OK to view history.')) {
-                    resetAndRedirect();
-                } else {
-                    resetAndRedirect();
-                }
-            } else {
-                Alert.alert('Success', 'Requisition submitted successfully!', [
-                    {
-                        text: 'OK',
-                        onPress: resetAndRedirect
-                    }
-                ]);
-            }
-
+            Alert.alert('Success', 'Requisition created successfully!', [
+                { text: 'OK', onPress: () => router.replace('/(tabs)/history') }
+            ]);
         } catch (error: any) {
-            console.error('Submission error:', error);
             Alert.alert('Error', error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const onDateChange = (event: any, selectedDate?: Date) => {
-        if (Platform.OS !== 'web') setShowDatePicker(false);
-        if (selectedDate) setPickupDate(selectedDate);
-    };
+    const renderDateInput = (label: string, value: Date | null, onChange: (d: Date | null) => void, onPress: () => void, mode: 'date' | 'time', icon: any) => (
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>{label}</Text>
+            {Platform.OS === 'web' ? (
+                <View style={styles.inputContainer}>
+                    <Ionicons name={icon} size={20} color={Colors.light.primary} style={styles.icon} />
+                    {React.createElement('input', {
+                        type: mode,
+                        value: value ? (mode === 'date' ? value.toISOString().split('T')[0] : value.toTimeString().slice(0, 5)) : '',
+                        onChange: (e: any) => {
+                            if (!e.target.value) {
+                                onChange(null);
+                                return;
+                            }
+                            const d = new Date();
+                            if (mode === 'date') {
+                                const [y, m, day] = e.target.value.split('-').map(Number);
+                                d.setFullYear(y, m - 1, day);
+                            } else {
+                                const current = value || new Date();
+                                const [h, m] = e.target.value.split(':').map(Number);
+                                d.setFullYear(current.getFullYear(), current.getMonth(), current.getDate());
+                                d.setHours(h, m);
+                                d.setSeconds(0);
+                            }
+                            onChange(d);
+                        },
+                        style: {
+                            border: 'none',
+                            background: 'transparent',
+                            fontSize: '16px',
+                            color: '#1E293B',
+                            width: '100%',
+                            outline: 'none',
+                            fontFamily: 'System',
+                            height: '100%'
+                        }
+                    })}
+                </View>
+            ) : (
+                <TouchableOpacity onPress={onPress} style={styles.inputContainer} activeOpacity={0.7}>
+                    <Ionicons name={icon} size={20} color={Colors.light.primary} style={styles.icon} />
+                    <Text style={value ? styles.inputText : styles.placeholder}>
+                        {value ? (mode === 'date' ? value.toDateString() : value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : `Select ${label}`}
+                    </Text>
+                </TouchableOpacity>
+            )}
+        </View>
+    );
 
-    const onPickupTimeChange = (event: any, selectedDate?: Date) => {
-        if (Platform.OS !== 'web') setShowPickupTimePicker(false);
-        if (selectedDate) setPickupTime(selectedDate);
-    };
-
-    const onDropTimeChange = (event: any, selectedDate?: Date) => {
-        if (Platform.OS !== 'web') setShowDropTimePicker(false);
-        if (selectedDate) setDropTime(selectedDate);
-    };
-
-    // Helper to render Web inputs
-    const renderWebInput = (mode: 'date' | 'time', value: Date | null, onChange: (e: any, date?: Date) => void) => {
-        const inputValue = value ? (
-            mode === 'date'
-                ? value.toISOString().split('T')[0]
-                : value.toTimeString().slice(0, 5)
-        ) : '';
-
-        return React.createElement('input', {
-            type: mode,
-            value: inputValue,
-            onChange: (e: any) => {
-                const val = e.target.value;
-                if (!val) {
-                    // Handle clear if needed, or just ignore
-                    return;
-                }
-                const newDate = new Date();
-                if (mode === 'date') {
-                    const [y, m, d] = val.split('-').map(Number);
-                    newDate.setFullYear(y, m - 1, d);
-                } else {
-                    const [h, m] = val.split(':').map(Number);
-                    newDate.setHours(h, m);
-                    newDate.setSeconds(0);
-                }
-                onChange(null, newDate);
-            },
-            style: {
-                padding: '10px',
-                borderRadius: '5px',
-                border: '1px solid #ccc',
-                marginBottom: '10px',
-                width: '100%',
-                fontSize: '16px',
-                fontFamily: 'System',
-                boxSizing: 'border-box'
-            }
-        });
-    };
+    const renderAutocomplete = (label: string, value: string, setValue: any, suggestions: any[], showSuggestions: boolean, handleSelect: any, isPickup: boolean, icon: string) => (
+        <View style={[styles.inputGroup, { zIndex: showSuggestions ? 100 : 1 }]}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={styles.inputContainer}>
+                <Ionicons name={icon as any} size={20} color={Colors.light.primary} style={styles.icon} />
+                <TextInput
+                    style={styles.textInput}
+                    value={value}
+                    onChangeText={(t) => setValue(t, isPickup)}
+                    placeholder={`Enter ${label}`}
+                    onFocus={() => value.length >= 3 && setValue(value, isPickup)}
+                />
+            </View>
+            {showSuggestions && suggestions.length > 0 && (
+                <View style={styles.dropdown}>
+                    {suggestions.map((item, index) => (
+                        <TouchableOpacity key={index} style={styles.dropdownItem} onPress={() => handleSelect(item, isPickup)}>
+                            <Text style={styles.dropdownText}>{item.display_name}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+        </View>
+    );
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.label}>Date</Text>
-            {Platform.OS === 'web' ? (
-                renderWebInput('date', pickupDate, onDateChange)
-            ) : (
-                <>
-                    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
-                        <Text style={!pickupDate ? styles.placeholder : undefined}>
-                            {pickupDate ? pickupDate.toDateString() : 'Select Date'}
-                        </Text>
-                    </TouchableOpacity>
-                    {showDatePicker && (
-                        <DateTimePicker value={pickupDate || new Date()} mode="date" onChange={onDateChange} />
-                    )}
-                </>
-            )}
+        <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <Text style={styles.header}>New Request</Text>
+            <Text style={styles.subHeader}>Fill in the details for your travel requisition</Text>
 
-            <Text style={styles.label}>Pick-up Time</Text>
-            {Platform.OS === 'web' ? (
-                renderWebInput('time', pickupTime, onPickupTimeChange)
-            ) : (
-                <>
-                    <TouchableOpacity onPress={() => setShowPickupTimePicker(true)} style={styles.input}>
-                        <Text style={!pickupTime ? styles.placeholder : undefined}>
-                            {pickupTime ? pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Pick-up Time'}
-                        </Text>
-                    </TouchableOpacity>
-                    {showPickupTimePicker && (
-                        <DateTimePicker value={pickupTime || new Date()} mode="time" onChange={onPickupTimeChange} />
-                    )}
-                </>
-            )}
+            <Card title="Trip Details">
+                {renderDateInput("Date", pickupDate, setPickupDate, () => setShowDatePicker(true), 'date', 'calendar')}
+                <View style={styles.row}>
+                    <View style={styles.half}>
+                        {renderDateInput("Pick-up", pickupTime, setPickupTime, () => setShowPickupTimePicker(true), 'time', 'time')}
+                    </View>
+                    <View style={styles.half}>
+                        {renderDateInput("Drop", dropTime, setDropTime, () => setShowDropTimePicker(true), 'time', 'time')}
+                    </View>
+                </View>
 
-            <Text style={styles.label}>Drop Time</Text>
-            {Platform.OS === 'web' ? (
-                renderWebInput('time', dropTime, onDropTimeChange)
-            ) : (
-                <>
-                    <TouchableOpacity onPress={() => setShowDropTimePicker(true)} style={styles.input}>
-                        <Text style={!dropTime ? styles.placeholder : undefined}>
-                            {dropTime ? dropTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select Drop Time'}
-                        </Text>
-                    </TouchableOpacity>
-                    {showDropTimePicker && (
-                        <DateTimePicker value={dropTime || new Date()} mode="time" onChange={onDropTimeChange} />
-                    )}
-                </>
-            )}
+                {renderAutocomplete("Pickup Location", pickupLocation, handleLocationChange, pickupSuggestions, showPickupSuggestions, selectSuggestion, true, 'navigate')}
+                {renderAutocomplete("Destination", destination, handleLocationChange, destSuggestions, showDestSuggestions, selectSuggestion, false, 'location')}
+            </Card>
 
-            <Text style={styles.label}>Vehicle Preference</Text>
-            <View style={styles.pickerContainer}>
-                <Picker selectedValue={vehicleType} onValueChange={(itemValue: string) => setVehicleType(itemValue)}>
-                    <Picker.Item label="Kia" value="Kia" />
-                    <Picker.Item label="Bolero" value="Bolero" />
-                    <Picker.Item label="Curve" value="Curve" />
-                    <Picker.Item label="Nexon" value="Nexon" />
-                    <Picker.Item label="Tiago" value="Tiago" />
-                    <Picker.Item label="Bus" value="Bus" />
-                </Picker>
-            </View>
+            <Card title="Purpose & Category">
+                <Text style={styles.label}>Category</Text>
+                <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={category} onValueChange={setCategory}>
+                        <Picker.Item label="In house Staff" value="In house Staff" />
+                        <Picker.Item label="Guest" value="Guest" />
+                        <Picker.Item label="VIP Guest" value="VIP Guest" />
+                    </Picker>
+                </View>
 
-            <Text style={styles.label}>Destination</Text>
-            <View style={styles.autocompleteContainer}>
-                <TextInput
-                    style={styles.input}
-                    value={destination}
-                    onChangeText={handleDestinationChange}
-                    placeholder="Search destination..."
-                    onFocus={() => destination.length >= 3 && setShowSuggestions(true)}
-                />
-                {showSuggestions && suggestions.length > 0 && (
-                    <ScrollView
-                        style={styles.suggestionsList}
-                        nestedScrollEnabled={true}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        {suggestions.map((item, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={styles.suggestionItem}
-                                onPress={() => selectSuggestion(item)}
-                            >
-                                <Text style={styles.suggestionText}>{item.display_name}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                {(category === 'Guest' || category === 'VIP Guest') && (
+                    <View style={styles.guestSection}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Guest Name</Text>
+                            <TextInput style={styles.input} value={guestName} onChangeText={setGuestName} placeholder="Guest Name" />
+                        </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Guest Mobile</Text>
+                            <TextInput style={styles.input} value={guestPhone} onChangeText={setGuestPhone} placeholder="Mobile Number" keyboardType="phone-pad" />
+                        </View>
+                    </View>
                 )}
-            </View>
 
-            <Text style={styles.label}>Purpose Type</Text>
-            <View style={styles.pickerContainer}>
-                <Picker selectedValue={purpose} onValueChange={(itemValue: string) => setPurpose(itemValue)}>
-                    <Picker.Item label="Meeting" value="meeting" />
-                    <Picker.Item label="In-house Event" value="in_house_event" />
-                    <Picker.Item label="Session" value="session" />
-                    <Picker.Item label="Workshop" value="workshop" />
-                    <Picker.Item label="Visit" value="visit" />
-                    <Picker.Item label="Participation" value="participation" />
-                    <Picker.Item label="Other" value="other" />
-                </Picker>
-            </View>
+                <Text style={styles.label}>Purpose</Text>
+                <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={purpose} onValueChange={setPurpose}>
+                        <Picker.Item label="Meeting" value="meeting" />
+                        <Picker.Item label="In-house Event" value="in_house_event" />
+                        <Picker.Item label="Session" value="session" />
+                        <Picker.Item label="Visit" value="visit" />
+                        <Picker.Item label="Other" value="other" />
+                    </Picker>
+                </View>
 
-            <Text style={styles.label}>Purpose Description</Text>
-            <TextInput style={styles.input} value={purposeDesc} onChangeText={setPurposeDesc} placeholder="Additional details..." multiline />
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Description</Text>
+                    <TextInput style={[styles.input, { height: 80 }]} value={purposeDesc} onChangeText={setPurposeDesc} placeholder="Additional details..." multiline />
+                </View>
+            </Card>
 
-            <Text style={styles.label}>Category (VIP, Guest, etc.)</Text>
-            <TextInput style={styles.input} value={category} onChangeText={setCategory} placeholder="e.g., VIP Movement" />
+            <Card title="Vehicle Preference">
+                <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={vehicleType} onValueChange={setVehicleType}>
+                        <Picker.Item label="Kia" value="Kia" />
+                        <Picker.Item label="Bolero" value="Bolero" />
+                        <Picker.Item label="Nexon" value="Nexon" />
+                        <Picker.Item label="Bus" value="Bus" />
+                    </Picker>
+                </View>
+            </Card>
 
-            <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
-                <Text style={styles.buttonText}>{loading ? 'Submitting...' : 'Submit Request'}</Text>
-            </TouchableOpacity>
+            <AnimatedButton title={loading ? "Submitting..." : "Submit Requisition"} onPress={handleSubmit} isLoading={loading} style={{ marginBottom: 40 }} />
+
+            {/* Native Date Pickers */}
+            {showDatePicker && Platform.OS !== 'web' && (
+                <DateTimePicker
+                    value={pickupDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(e, d) => {
+                        setShowDatePicker(false);
+                        if (d) setPickupDate(d);
+                    }}
+                />
+            )}
+            {showPickupTimePicker && Platform.OS !== 'web' && (
+                <DateTimePicker
+                    value={pickupTime || new Date()}
+                    mode="time"
+                    display="default"
+                    onChange={(e, d) => {
+                        setShowPickupTimePicker(false);
+                        if (d) setPickupTime(d);
+                    }}
+                />
+            )}
+            {showDropTimePicker && Platform.OS !== 'web' && (
+                <DateTimePicker
+                    value={dropTime || new Date()}
+                    mode="time"
+                    display="default"
+                    onChange={(e, d) => {
+                        setShowDropTimePicker(false);
+                        if (d) setDropTime(d);
+                    }}
+                />
+            )}
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        padding: 20,
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 5,
-        marginTop: 10,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        backgroundColor: '#fff',
-    },
-    pickerContainer: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        backgroundColor: '#fff',
-    },
-    button: {
-        backgroundColor: '#007AFF',
-        padding: 15,
-        borderRadius: 5,
-        alignItems: 'center',
-        marginTop: 30,
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    webPickerContainer: {
-        marginBottom: 10,
-        backgroundColor: '#fff',
-        borderRadius: 5,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        padding: 5,
-    },
-    placeholder: {
-        color: '#999',
-    },
-    autocompleteContainer: {
-        zIndex: 10,
-        position: 'relative',
-    },
-    suggestionsList: {
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        maxHeight: 200,
-        zIndex: 1000,
-        elevation: 5, // For Android shadow
-        shadowColor: '#000', // For iOS shadow
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-    },
-    suggestionItem: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    suggestionText: {
-        fontSize: 14,
-        color: '#333',
-    },
+    screen: { flex: 1, backgroundColor: Colors.light.background },
+    content: { padding: 20 },
+    header: { fontSize: 28, fontWeight: '800', color: Colors.light.primary, marginBottom: 5 },
+    subHeader: { fontSize: 14, color: '#64748B', marginBottom: 20 },
+
+    inputGroup: { marginBottom: 16 },
+    label: { fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 15, height: 50 },
+    icon: { marginRight: 10 },
+    textInput: { flex: 1, fontSize: 16, color: '#1E293B' },
+    inputText: { fontSize: 16, color: '#1E293B' },
+    placeholder: { fontSize: 16, color: '#94A3B8' },
+
+    // Legacy Input style fallback
+    input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 15, fontSize: 16, color: '#1E293B' },
+
+    pickerWrapper: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, marginBottom: 16, overflow: 'hidden' },
+
+    row: { flexDirection: 'row', gap: 15 },
+    half: { flex: 1 },
+
+    dropdown: { position: 'absolute', top: 55, left: 0, right: 0, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', elevation: 5, padding: 5, zIndex: 999 },
+    dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    dropdownText: { fontSize: 14, color: '#333' },
+
+    guestSection: { backgroundColor: '#EFF6FF', padding: 15, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#DBEAFE' },
 });

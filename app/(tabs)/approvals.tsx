@@ -1,6 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
+import { Colors, Shadows } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthProvider';
 import { supabase } from '../../lib/supabase';
 
@@ -15,13 +18,8 @@ export default function Approvals() {
             let query = supabase.from('requisitions').select('*, profiles:requester_id(full_name, department)');
 
             if (isHOD) {
-                // HOD sees requests pending HOD approval
                 query = query.eq('status', 'pending_hod');
             } else if (isAdmin) {
-                // Admin normally sees pending_admin, but for testing/fallback let's show both
-                // or if we want strict flow, we keep it. 
-                // But user is stuck because they are Admin and requests are pending_hod.
-                // Let's allow Admin to see pending_hod as well for now.
                 query = query.in('status', ['pending_hod', 'pending_admin']);
             }
 
@@ -30,7 +28,6 @@ export default function Approvals() {
 
             let filteredData = data || [];
 
-            // Client-side filter for HODs to only see their department
             if (isHOD && user?.department) {
                 filteredData = filteredData.filter(req => req.profiles?.department === user.department);
             }
@@ -52,30 +49,72 @@ export default function Approvals() {
         fetchRequests();
     };
 
-    const renderItem = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            style={styles.card}
-            onPress={() => router.push(`/approval/${item.id}`)}
+    const renderItem = ({ item, index }: { item: any, index: number }) => (
+        <Animated.View
+            entering={FadeInDown.delay(index * 100).springify()}
+            layout={Layout.springify()}
         >
-            <View style={styles.header}>
-                <Text style={styles.requester}>{item.profiles?.full_name || 'Unknown User'}</Text>
-                <Text style={styles.date}>{item.pickup_date}</Text>
-            </View>
-            <Text style={styles.dept}>{item.profiles?.department || 'No Dept'}</Text>
-            <Text style={styles.details}>Dest: {item.destination}</Text>
-            <Text style={styles.details}>Purpose: {item.purpose}</Text>
-            <Text style={styles.actionPrompt}>Tap to Review</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(`/approval/${item.id}`)}
+                activeOpacity={0.9}
+            >
+                <View style={styles.cardHeader}>
+                    <View style={styles.userInfo}>
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>
+                                {item.profiles?.full_name?.[0]?.toUpperCase() || 'U'}
+                            </Text>
+                        </View>
+                        <View>
+                            <Text style={styles.requesterName}>{item.profiles?.full_name || 'Unknown User'}</Text>
+                            <Text style={styles.departmentName}>{item.profiles?.department || 'No Dept'}</Text>
+                        </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+                </View>
+
+                <View style={styles.cardBody}>
+                    <View style={styles.row}>
+                        <Ionicons name="calendar-outline" size={16} color={Colors.light.primary} />
+                        <Text style={styles.metaText}>{new Date(item.pickup_date).toLocaleDateString()}</Text>
+
+                        <View style={styles.dot} />
+
+                        <Ionicons name="location-outline" size={16} color={Colors.light.primary} />
+                        <Text style={styles.metaText}>{item.destination}</Text>
+                    </View>
+
+                    <Text style={styles.purposeText} numberOfLines={2}>
+                        {item.purpose}
+                    </Text>
+                </View>
+
+                <View style={styles.cardFooter}>
+                    <Text style={styles.actionText}>Review Request</Text>
+                    <Ionicons name="arrow-forward" size={16} color={Colors.light.primary} />
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
     );
 
     return (
         <View style={styles.container}>
+            <View style={styles.headerContainer}>
+                <Text style={styles.pageTitle}>Pending Approvals</Text>
+            </View>
             <FlatList
                 data={requests}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                ListEmptyComponent={<Text style={styles.emptyText}>No pending approvals.</Text>}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="checkmark-circle-outline" size={64} color="#CBD5E1" />
+                        <Text style={styles.emptyText}>All caught up! No pending approvals.</Text>
+                    </View>
+                }
             />
         </View>
     );
@@ -84,50 +123,113 @@ export default function Approvals() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 10,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: Colors.light.background,
+    },
+    headerContainer: {
+        padding: 20,
+        paddingBottom: 10,
+    },
+    pageTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: Colors.light.primary,
+    },
+    listContent: {
+        padding: 20,
+        paddingTop: 10,
     },
     card: {
         backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1.41,
-        elevation: 2,
+        borderRadius: 16,
+        marginBottom: 16,
+        ...Shadows.light.medium,
+        overflow: 'hidden',
     },
-    header: {
+    cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 5,
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
     },
-    requester: {
-        fontWeight: 'bold',
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#EFF6FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#DBEAFE',
+    },
+    avatarText: {
         fontSize: 16,
+        fontWeight: '700',
+        color: Colors.light.primary,
     },
-    date: {
-        color: '#666',
+    requesterName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1E293B',
     },
-    dept: {
-        fontStyle: 'italic',
-        marginBottom: 5,
-        color: '#444',
+    departmentName: {
+        fontSize: 12,
+        color: '#64748B',
     },
-    details: {
+    cardBody: {
+        padding: 16,
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    dot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#CBD5E1',
+        marginHorizontal: 8,
+    },
+    metaText: {
         fontSize: 14,
-        color: '#333',
+        color: '#64748B',
+        marginLeft: 6,
+        fontWeight: '500',
     },
-    actionPrompt: {
-        marginTop: 10,
-        color: '#007AFF',
-        fontWeight: '600',
-        textAlign: 'right',
+    purposeText: {
+        fontSize: 14,
+        color: '#334155',
+        lineHeight: 20,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        padding: 12,
+        backgroundColor: '#F8FAFC',
+        gap: 4,
+    },
+    actionText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.light.primary,
+        textTransform: 'uppercase',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 50,
     },
     emptyText: {
-        textAlign: 'center',
-        marginTop: 50,
-        color: '#666',
+        marginTop: 10,
+        fontSize: 16,
+        color: '#94A3B8',
     },
 });

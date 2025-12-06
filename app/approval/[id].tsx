@@ -1,10 +1,26 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Colors, Shadows } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthProvider';
 import { supabase } from '../../lib/supabase';
+
+// Premium Components
+const InfoRow = ({ icon, label, value, isLast = false }: { icon: string; label: string; value: string; isLast?: boolean }) => (
+    <View style={[styles.infoRow, isLast && styles.lastInfoRow]}>
+        <View style={styles.iconContainer}>
+            <Ionicons name={icon as any} size={20} color={Colors.light.primary} />
+        </View>
+        <View style={styles.infoContent}>
+            <Text style={styles.infoLabel}>{label}</Text>
+            <Text style={styles.infoValue}>{value}</Text>
+        </View>
+    </View>
+);
 
 export default function ApprovalDetail() {
     const { id } = useLocalSearchParams();
@@ -114,143 +130,272 @@ export default function ApprovalDetail() {
         }
     };
 
-    if (loading || !request) return <Text style={styles.loading}>Loading...</Text>;
+    if (loading || !request) return (
+        <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.light.primary} />
+        </View>
+    );
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.mainContainer}>
             <Stack.Screen options={{ title: 'Review Request', headerShown: true }} />
-            <View style={styles.section}>
-                <Text style={styles.label}>Requester</Text>
-                <Text style={styles.value}>{request.profiles?.full_name} ({request.profiles?.department})</Text>
-                <Text style={styles.value}>College: {request.profiles?.college_name || 'N/A'}</Text>
-                <Text style={styles.value}>HOD: {request.profiles?.hod_name || 'N/A'}</Text>
-                <Text style={styles.value}>Director: {request.profiles?.director_name || 'N/A'}</Text>
-                <Text style={styles.value}>Phone: {request.profiles?.phone_number || 'N/A'}</Text>
-            </View>
 
-            <View style={styles.section}>
-                <Text style={styles.label}>Trip Details</Text>
-                <Text style={styles.value}>Date: {request.pickup_date}</Text>
-                <Text style={styles.value}>Time: {request.pickup_time} - {request.drop_time}</Text>
-                <Text style={styles.value}>Destination: {request.destination}</Text>
-                <Text style={styles.value}>Purpose: {request.purpose} ({request.category})</Text>
-                <Text style={styles.value}>Desc: {request.purpose_description}</Text>
-            </View>
-
-            {isAdmin && (
-                <View style={styles.section}>
-                    <Text style={styles.label}>Assign Vehicle</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={selectedVehicle}
-                            onValueChange={(itemValue: string) => setSelectedVehicle(itemValue)}
-                        >
-                            <Picker.Item label="Select Vehicle" value="" />
-                            {vehicles.map(v => (
-                                <Picker.Item key={v.id} label={`${v.name} (${v.type})`} value={v.id} />
-                            ))}
-                        </Picker>
-                    </View>
-
-                    <Text style={[styles.label, { marginTop: 15 }]}>Assign Driver</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={selectedDriver}
-                            onValueChange={(itemValue: string) => setSelectedDriver(itemValue)}
-                        >
-                            <Picker.Item label="Select Driver" value="" />
-                            {drivers.map(d => (
-                                <Picker.Item key={d.id} label={d.full_name || d.email} value={d.id} />
-                            ))}
-                        </Picker>
-                    </View>
-                </View>
-            )}
-
-            <View style={styles.section}>
-                <Text style={styles.label}>Remarks</Text>
-                <TextInput
-                    style={styles.input}
-                    value={remarks}
-                    onChangeText={setRemarks}
-                    placeholder="Add comments..."
-                    multiline
-                />
-            </View>
-
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={() => handleAction('reject')}>
-                    <Text style={styles.buttonText}>Reject</Text>
+            <View style={styles.headerContainer}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.approveButton]} onPress={() => handleAction('approve')}>
-                    <Text style={styles.buttonText}>Approve</Text>
-                </TouchableOpacity>
+                <Text style={styles.pageTitle}>Review Request</Text>
             </View>
-        </ScrollView>
+
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Requester Details Card */}
+                <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <Ionicons name="person" size={20} color={Colors.light.primary} />
+                        <Text style={styles.cardTitle}>Requester Details</Text>
+                    </View>
+                    <View style={styles.cardBody}>
+                        <InfoRow icon="person-outline" label="Name" value={request.profiles?.full_name} />
+                        <InfoRow icon="business-outline" label="Department" value={request.profiles?.department} />
+                        <InfoRow icon="school-outline" label="College" value={request.profiles?.college_name || 'N/A'} />
+                        <InfoRow icon="call-outline" label="Phone" value={request.profiles?.phone_number || 'N/A'} isLast />
+                    </View>
+                </Animated.View>
+
+                {/* Trip Details Card */}
+                <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <Ionicons name="car-sport" size={20} color={Colors.light.primary} />
+                        <Text style={styles.cardTitle}>Trip Details</Text>
+                    </View>
+                    <View style={styles.cardBody}>
+                        <InfoRow icon="calendar-outline" label="Date" value={request.pickup_date} />
+                        <InfoRow icon="time-outline" label="Time" value={`${request.pickup_time} - ${request.drop_time}`} />
+                        <InfoRow icon="location-outline" label="Destination" value={request.destination} />
+                        <InfoRow icon="briefcase-outline" label="Purpose" value={`${request.purpose} (${request.category})`} />
+                        <View style={[styles.infoRow, styles.lastInfoRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                <View style={styles.iconContainer}>
+                                    <Ionicons name="document-text-outline" size={20} color={Colors.light.primary} />
+                                </View>
+                                <Text style={styles.infoLabel}>Description</Text>
+                            </View>
+                            <Text style={[styles.infoValue, { marginLeft: 34 }]}>{request.purpose_description}</Text>
+                        </View>
+                    </View>
+                </Animated.View>
+
+                {isAdmin && (
+                    <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.card}>
+                        <View style={styles.cardHeader}>
+                            <Ionicons name="construct" size={20} color={Colors.light.primary} />
+                            <Text style={styles.cardTitle}>Assignment</Text>
+                        </View>
+                        <View style={styles.cardBody}>
+                            <Text style={styles.inputLabel}>Assign Vehicle</Text>
+                            <View style={styles.pickerWrapper}>
+                                <Picker
+                                    selectedValue={selectedVehicle}
+                                    onValueChange={(itemValue: string) => setSelectedVehicle(itemValue)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Select Vehicle" value="" enabled={false} />
+                                    {vehicles.map(v => (
+                                        <Picker.Item key={v.id} label={`${v.name} (${v.type})`} value={v.id} />
+                                    ))}
+                                </Picker>
+                            </View>
+
+                            <Text style={[styles.inputLabel, { marginTop: 15 }]}>Assign Driver</Text>
+                            <View style={styles.pickerWrapper}>
+                                <Picker
+                                    selectedValue={selectedDriver}
+                                    onValueChange={(itemValue: string) => setSelectedDriver(itemValue)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Select Driver" value="" enabled={false} />
+                                    {drivers.map(d => (
+                                        <Picker.Item key={d.id} label={d.full_name || d.email} value={d.id} />
+                                    ))}
+                                </Picker>
+                            </View>
+                        </View>
+                    </Animated.View>
+                )}
+
+                <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <Ionicons name="chatbox" size={20} color={Colors.light.primary} />
+                        <Text style={styles.cardTitle}>Remarks</Text>
+                    </View>
+                    <TextInput
+                        style={styles.textArea}
+                        value={remarks}
+                        onChangeText={setRemarks}
+                        placeholder="Add your comments here..."
+                        multiline
+                        numberOfLines={4}
+                    />
+                </Animated.View>
+
+                <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.actionButtons}>
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.rejectButton]}
+                        onPress={() => handleAction('reject')}
+                        disabled={loading}
+                    >
+                        <Ionicons name="close-circle" size={24} color="#fff" />
+                        <Text style={styles.actionButtonText}>Reject</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.approveButton]}
+                        onPress={() => handleAction('approve')}
+                        disabled={loading}
+                    >
+                        <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                        <Text style={styles.actionButtonText}>Approve</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+
+                <View style={{ height: 40 }} />
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    mainContainer: {
+        flex: 1,
+        backgroundColor: Colors.light.background,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.light.background,
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 20,
-        paddingBottom: 50,
+        paddingBottom: 10,
+        backgroundColor: Colors.light.background,
     },
-    loading: {
-        marginTop: 50,
-        textAlign: 'center',
+    backButton: {
+        marginRight: 15,
+        padding: 4,
     },
-    section: {
-        marginBottom: 20,
+    pageTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: Colors.light.primary,
+    },
+    scrollContent: {
+        padding: 20,
+    },
+    card: {
         backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#eee',
+        borderRadius: 16,
+        marginBottom: 20,
+        ...Shadows.light.medium,
+        overflow: 'hidden',
     },
-    label: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 5,
-        fontWeight: 'bold',
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: '#F8FAFC',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        gap: 10,
     },
-    value: {
+    cardTitle: {
         fontSize: 16,
-        marginBottom: 2,
-        color: '#333',
+        fontWeight: '700',
+        color: '#1E293B',
     },
-    input: {
+    cardBody: {
+        padding: 16,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    lastInfoRow: {
+        marginBottom: 0,
+    },
+    iconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F0F9FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    infoContent: {
+        flex: 1,
+    },
+    infoLabel: {
+        fontSize: 12,
+        color: '#64748B',
+        marginBottom: 2,
+    },
+    infoValue: {
+        fontSize: 15,
+        color: '#334155',
+        fontWeight: '500',
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#475569',
+        marginBottom: 8,
+    },
+    pickerWrapper: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        height: 80,
+        borderColor: '#E2E8F0',
+        borderRadius: 12,
+        overflow: 'hidden',
+        backgroundColor: '#F8FAFC',
+    },
+    picker: {
+        width: '100%',
+        height: 50,
+    },
+    textArea: {
+        padding: 16,
+        fontSize: 15,
+        color: '#334155',
+        minHeight: 100,
         textAlignVertical: 'top',
     },
-    pickerContainer: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-    },
-    buttonContainer: {
+    actionButtons: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        gap: 15,
         marginTop: 10,
     },
-    button: {
-        flex: 0.48,
-        padding: 15,
-        borderRadius: 8,
+    actionButton: {
+        flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 16,
+        gap: 8,
+        ...Shadows.light.small,
     },
     approveButton: {
-        backgroundColor: 'green',
+        backgroundColor: '#10B981',
     },
     rejectButton: {
-        backgroundColor: 'red',
+        backgroundColor: '#EF4444',
     },
-    buttonText: {
+    actionButtonText: {
         color: '#fff',
-        fontWeight: 'bold',
         fontSize: 16,
+        fontWeight: '700',
     },
 });
