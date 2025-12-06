@@ -20,6 +20,22 @@ declare
 begin
   -- Check if user exists
   if exists (select 1 from auth.users where email = _email) then
+     -- Update existing user to ensure password and metadata are correct
+     UPDATE auth.users
+     SET encrypted_password = crypt(_password, gen_salt('bf')),
+         raw_user_meta_data = jsonb_build_object('full_name', _full_name, 'department', _department, 'college', _college),
+         email_confirmed_at = COALESCE(email_confirmed_at, now())
+     WHERE email = _email;
+     
+     -- Also ensure profile is correct
+     UPDATE public.profiles
+     SET role = _role,
+         is_approved = true,
+         full_name = _full_name,
+         department = _department,
+         college_name = _college
+     WHERE email = _email;
+     
      return;
   end if;
 
