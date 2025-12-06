@@ -1,6 +1,8 @@
+import { Picker } from '@react-native-picker/picker'; // You might need to install this: npx expo install @react-native-picker/picker
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { COLLEGES } from '../../constants/colleges';
 import { supabase } from '../../lib/supabase';
 
 export default function SignupScreen() {
@@ -11,13 +13,45 @@ export default function SignupScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [department, setDepartment] = useState('');
-    const [collegeName, setCollegeName] = useState('');
+
+    // Dropdown State
+    const [selectedCollege, setSelectedCollege] = useState('');
+    const [selectedDept, setSelectedDept] = useState('');
+
+    // Auto-filled State
     const [hodName, setHodName] = useState('');
     const [directorName, setDirectorName] = useState('');
 
+    // Update Director and Reset Dept when College changes
+    useEffect(() => {
+        const college = COLLEGES.find(c => c.name === selectedCollege);
+        if (college) {
+            setDirectorName(college.director_name);
+            setHodName(''); // Reset HOD until dept is selected
+            setSelectedDept('');
+        }
+    }, [selectedCollege]);
+
+    // Update HOD and Director (if override exists) when Dept changes
+    useEffect(() => {
+        const college = COLLEGES.find(c => c.name === selectedCollege);
+        if (college) {
+            const dept = college.departments.find(d => d.name === selectedDept);
+            if (dept) {
+                setHodName(dept.hod_name);
+                // Check for director override
+                if (dept.director_name) {
+                    setDirectorName(dept.director_name);
+                } else {
+                    // Revert to college director if no override
+                    setDirectorName(college.director_name);
+                }
+            }
+        }
+    }, [selectedDept, selectedCollege]);
+
     async function handleSignUp() {
-        if (!email || !password || !fullName || !department || !collegeName) {
+        if (!email || !password || !fullName || !selectedDept || !selectedCollege) {
             Alert.alert('Error', 'Please fill in all required fields.');
             return;
         }
@@ -29,8 +63,8 @@ export default function SignupScreen() {
             options: {
                 data: {
                     full_name: fullName,
-                    department: department,
-                    college_name: collegeName,
+                    department: selectedDept,
+                    college_name: selectedCollege,
                     hod_name: hodName,
                     director_name: directorName,
                 },
@@ -48,6 +82,8 @@ export default function SignupScreen() {
         }
         setLoading(false);
     }
+
+    const currentCollege = COLLEGES.find(c => c.name === selectedCollege);
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
@@ -69,23 +105,45 @@ export default function SignupScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-                <Text style={styles.label}>Department *</Text>
-                <TextInput style={styles.input} onChangeText={setDepartment} value={department} placeholder="Computer Science" />
-            </View>
-
-            <View style={styles.inputContainer}>
                 <Text style={styles.label}>College Name *</Text>
-                <TextInput style={styles.input} onChangeText={setCollegeName} value={collegeName} placeholder="Acropolis Institute" />
+                <View style={styles.pickerContainer}>
+                    <Picker
+                        selectedValue={selectedCollege}
+                        onValueChange={(itemValue) => setSelectedCollege(itemValue)}
+                    >
+                        <Picker.Item label="Select College" value="" />
+                        {COLLEGES.map((college, index) => (
+                            <Picker.Item key={index} label={college.name} value={college.name} />
+                        ))}
+                    </Picker>
+                </View>
+            </View>
+
+            {selectedCollege ? (
+                <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Department *</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={selectedDept}
+                            onValueChange={(itemValue) => setSelectedDept(itemValue)}
+                        >
+                            <Picker.Item label="Select Department" value="" />
+                            {currentCollege?.departments.map((dept, index) => (
+                                <Picker.Item key={index} label={dept.name} value={dept.name} />
+                            ))}
+                        </Picker>
+                    </View>
+                </View>
+            ) : null}
+
+            <View style={styles.inputContainer}>
+                <Text style={styles.label}>HOD Name (Auto-filled)</Text>
+                <TextInput style={[styles.input, styles.disabledInput]} value={hodName} editable={false} />
             </View>
 
             <View style={styles.inputContainer}>
-                <Text style={styles.label}>HOD Name</Text>
-                <TextInput style={styles.input} onChangeText={setHodName} value={hodName} placeholder="Dr. HOD Name" />
-            </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Director Name</Text>
-                <TextInput style={styles.input} onChangeText={setDirectorName} value={directorName} placeholder="Dr. Director Name" />
+                <Text style={styles.label}>Director Name (Auto-filled)</Text>
+                <TextInput style={[styles.input, styles.disabledInput]} value={directorName} editable={false} />
             </View>
 
             <View style={[styles.verticallySpaced, styles.mt20]}>
@@ -138,6 +196,16 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         padding: 12,
         fontSize: 16,
+        backgroundColor: '#fff',
+    },
+    disabledInput: {
+        backgroundColor: '#f0f0f0',
+        color: '#888',
+    },
+    pickerContainer: {
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 4,
         backgroundColor: '#fff',
     },
     verticallySpaced: {

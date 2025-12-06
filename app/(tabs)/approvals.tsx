@@ -27,7 +27,15 @@ export default function Approvals() {
 
             const { data, error } = await query;
             if (error) throw error;
-            setRequests(data || []);
+
+            let filteredData = data || [];
+
+            // Client-side filter for HODs to only see their department
+            if (isHOD && user?.department) {
+                filteredData = filteredData.filter(req => req.profiles?.department === user.department);
+            }
+
+            setRequests(filteredData);
         } catch (error) {
             console.error(error);
         } finally {
