@@ -30,16 +30,39 @@ export default function UserApprovals() {
     };
 
     const handleApprove = async (userId: string) => {
-        const { error } = await supabase
+        const { data, error, count } = await supabase
             .from('profiles')
             .update({ is_approved: true })
-            .eq('id', userId);
+            .eq('id', userId)
+            .select('*', { count: 'exact' });
 
         if (error) {
+            console.error('Approval Error:', error);
             Alert.alert('Error', error.message);
         } else {
-            Alert.alert('Success', 'User approved successfully.');
-            fetchPendingUsers(); // Refresh list
+            // Check if any row was actually updated
+            if ((data && data.length === 0) && (count === null || count === 0)) {
+                console.warn('Update succeeded but 0 rows affected. RLS might be blocking it.');
+                Alert.alert('Warning', 'Update seemed to fail (0 rows affected). Check Admin permissions.');
+                return;
+            }
+
+            console.log('User approved:', userId, 'Rows affected:', data?.length);
+            Alert.alert(
+                'Success',
+                'User approved successfully.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            // Add a small delay to ensure DB propagation
+                            setTimeout(() => {
+                                fetchPendingUsers();
+                            }, 500);
+                        }
+                    }
+                ]
+            );
         }
     };
 
@@ -66,6 +89,11 @@ export default function UserApprovals() {
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ title: 'Pending Users', headerShown: true }} />
+
+            <TouchableOpacity onPress={() => router.replace('/(tabs)/profile')} style={styles.backButton}>
+                <Text style={styles.backButtonText}>← Back to Profile</Text>
+            </TouchableOpacity>
+
             {users.length === 0 ? (
                 <Text style={styles.emptyText}>No pending users found.</Text>
             ) : (
@@ -84,6 +112,14 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 15,
         backgroundColor: '#f5f5f5',
+    },
+    backButton: {
+        marginBottom: 10,
+        padding: 5,
+    },
+    backButtonText: {
+        color: '#007AFF',
+        fontSize: 16,
     },
     loader: {
         marginTop: 50,

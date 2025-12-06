@@ -159,7 +159,7 @@ export default function SignupScreen() {
             <View style={styles.verticallySpaced}>
                 <TouchableOpacity
                     style={[styles.button, styles.buttonOutline]}
-                    onPress={() => router.back()}
+                    onPress={() => router.replace('/(auth)/login')}
                 >
                     <Text style={styles.buttonOutlineText}>Back to Login</Text>
                 </TouchableOpacity>
