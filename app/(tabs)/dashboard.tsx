@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedButton } from '../../components/ui/AnimatedButton';
 import { Card } from '../../components/ui/Card';
@@ -15,10 +15,12 @@ export default function Dashboard() {
     const insets = useSafeAreaInsets();
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ pending: 0, approved: 0, total: 0 });
+    const [fleetStats, setFleetStats] = useState({ total: 0, booked: 0, free: 0 });
 
     const fetchStats = useCallback(async () => {
         if (!user) return;
 
+        // User Stats
         const { data, error } = await supabase
             .from('requisitions')
             .select('status')
@@ -29,6 +31,24 @@ export default function Dashboard() {
             const approved = data.filter(r => r.status === 'approved').length;
             setStats({ pending, approved, total: data.length });
         }
+
+        // Fleet Stats (Global)
+        const { count: totalVehicles } = await supabase
+            .from('vehicles')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active');
+
+        const today = new Date().toISOString().split('T')[0];
+        const { count: bookedVehicles } = await supabase
+            .from('requisitions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'approved')
+            .gte('pickup_date', today); // Approximating booked as approved requests from today onwards
+
+        const total = totalVehicles || 0;
+        const booked = bookedVehicles || 0;
+        setFleetStats({ total, booked, free: total - booked });
+
     }, [user]);
 
     useEffect(() => {
@@ -88,8 +108,17 @@ export default function Dashboard() {
                         <AnimatedButton
                             title="Approvals"
                             onPress={() => router.push('/(tabs)/approvals')}
-                            style={[styles.actionButton, { marginTop: 12, backgroundColor: Colors.light.accent }]}
+                            style={[styles.actionButton, { marginTop: 12 }]}
                             icon={<Ionicons name="documents-outline" size={24} color="#fff" style={{ marginRight: 8 }} />}
+                        />
+                    )}
+
+                    {role === 'admin' && (
+                        <AnimatedButton
+                            title="Transport Panel"
+                            onPress={() => router.push('/admin/transport_panel')}
+                            style={[styles.actionButton, { marginTop: 12, backgroundColor: Colors.light.secondary }]}
+                            icon={<Ionicons name="analytics-outline" size={24} color="#fff" style={{ marginRight: 8 }} />}
                         />
                     )}
                 </View>
@@ -98,16 +127,25 @@ export default function Dashboard() {
                     <Text style={styles.sectionTitle}>System Status</Text>
                 </View>
 
-                <Card>
-                    <View style={styles.infoRow}>
-                        <Ionicons name="car-sport-outline" size={24} color={Colors.light.primary} />
-                        <View style={styles.infoContent}>
-                            <Text style={styles.infoTitle}>Vehicle Availability</Text>
-                            <Text style={styles.infoDesc}>All vehicles are currently operational.</Text>
+                <TouchableOpacity
+                    onPress={() => role === 'admin' && router.push('/admin/transport_panel')}
+                    activeOpacity={role === 'admin' ? 0.7 : 1}
+                >
+                    <Card>
+                        <View style={styles.infoRow}>
+                            <Ionicons name="car-sport-outline" size={24} color={Colors.light.primary} />
+                            <View style={styles.infoContent}>
+                                <Text style={styles.infoTitle}>Fleet Status</Text>
+                                <Text style={styles.infoDesc}>
+                                    <Text style={{ fontWeight: '700', color: Colors.light.primary }}>{fleetStats.free}</Text> Free •
+                                    <Text style={{ fontWeight: '700', color: '#F59E0B' }}> {fleetStats.booked}</Text> Booked •
+                                    <Text style={{ fontWeight: '700' }}> {fleetStats.total}</Text> Total
+                                </Text>
+                            </View>
+                            {role === 'admin' && <Ionicons name="chevron-forward" size={20} color="#94A3B8" />}
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
-                    </View>
-                </Card>
+                    </Card>
+                </TouchableOpacity>
 
             </ScrollView>
         </View>

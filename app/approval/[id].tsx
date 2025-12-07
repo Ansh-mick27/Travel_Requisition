@@ -62,7 +62,7 @@ export default function ApprovalDetail() {
     };
 
     const fetchDrivers = async () => {
-        const { data } = await supabase.from('profiles').select('*').eq('role', 'driver');
+        const { data } = await supabase.from('drivers').select('*').eq('status', 'active');
         if (data) setDrivers(data);
     };
 
@@ -109,9 +109,11 @@ export default function ApprovalDetail() {
                 const isAvailable = await SMS.isAvailableAsync();
                 if (isAvailable) {
                     const vehicleName = vehicles.find(v => v.id === selectedVehicle)?.name || 'Vehicle';
-                    const driverName = drivers.find(d => d.id === selectedDriver)?.full_name || 'Driver';
+                    const driverObj = drivers.find(d => d.id === selectedDriver);
+                    const driverName = driverObj?.full_name || 'Driver';
+                    const driverPhone = driverObj?.phone_number || 'N/A';
 
-                    const message = `Travel Requisition Approved!\nVehicle: ${vehicleName}\nDriver: ${driverName}\nPickup: ${request.pickup_time}`;
+                    const message = `Travel Requisition Approved!\nVehicle: ${vehicleName}\nDriver: ${driverName} (${driverPhone})\nPickup: ${request.pickup_time}`;
 
                     await SMS.sendSMSAsync(
                         [request.profiles.phone_number],
@@ -215,7 +217,7 @@ export default function ApprovalDetail() {
                                 >
                                     <Picker.Item label="Select Driver" value="" enabled={false} />
                                     {drivers.map(d => (
-                                        <Picker.Item key={d.id} label={d.full_name || d.email} value={d.id} />
+                                        <Picker.Item key={d.id} label={d.full_name} value={d.id} />
                                     ))}
                                 </Picker>
                             </View>

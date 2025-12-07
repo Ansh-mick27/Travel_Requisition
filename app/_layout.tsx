@@ -36,6 +36,7 @@ function InitialLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="approval/[id]" options={{ presentation: 'card', headerShown: true, title: 'Review Request' }} />
       <Stack.Screen name="admin/user_approvals" options={{ presentation: 'card', headerShown: true, title: 'Manage Users' }} />
+      <Stack.Screen name="admin/transport_panel" options={{ presentation: 'card', headerShown: true, title: 'Transport Analytics' }} />
     </Stack>
   );
 }

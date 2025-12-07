@@ -133,7 +133,7 @@ export default function CreateRequest() {
                 guest_name: guestName,
                 guest_phone: guestPhone,
                 vehicle_type: vehicleType,
-                status: 'pending_hod',
+                status: (user?.role === 'hod' || user?.role === 'admin') ? 'pending_admin' : 'pending_hod',
             });
 
             if (error) throw error;
