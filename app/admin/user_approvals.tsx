@@ -37,7 +37,7 @@ export default function UserApprovals() {
             .from('profiles')
             .update({ is_approved: true })
             .eq('id', userId)
-            .select('*', { count: 'exact' });
+            .select('*');
 
         if (error) {
             console.error('Approval Error:', error);

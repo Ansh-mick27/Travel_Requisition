@@ -35,6 +35,7 @@ export const Colors = {
     card: '#1E293B',
     border: '#334155',
     error: '#EF4444',
+    accent: '#8B5CF6',
   },
 };
 

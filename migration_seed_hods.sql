@@ -72,34 +72,34 @@ $$ language plpgsql security definer;
 
 -- 2. Seed the Users
 -- Acropolis Institute of Management Studies and Research
-select public.seed_user('rajesh.chaba@acropolis.in', 'Password@123', 'Dr. Rajesh Chaba', 'hod', 'Director', 'Acropolis Institute of Management Studies and Research');
-select public.seed_user('anant.gwal@acropolis.in', 'Password@123', 'Dr. Anant Gwal', 'hod', 'Department Of Business Administration', 'Acropolis Institute of Management Studies and Research');
-select public.seed_user('pranoti.belapurkar@acropolis.in', 'Password@123', 'Dr. Pranoti Belapurkar', 'hod', 'Department Of Biosciences', 'Acropolis Institute of Management Studies and Research');
-select public.seed_user('smriti.jain@acropolis.in', 'Password@123', 'Dr. Smriti Jain', 'hod', 'Department Of Computer Science', 'Acropolis Institute of Management Studies and Research');
-select public.seed_user('sonali.jain@acropolis.in', 'Password@123', 'Dr. Sonali Jain', 'hod', 'Department Of Commerce', 'Acropolis Institute of Management Studies and Research');
+select public.seed_user('principalaimsr@acropolis.in', 'Password@123', 'Dr. Rajesh Chaba', 'hod', 'Director', 'Acropolis Institute of Management Studies and Research');
+select public.seed_user('anantgwal@acropolis.in', 'Password@123', 'Dr. Anant Gwal', 'hod', 'Department Of Business Administration', 'Acropolis Institute of Management Studies and Research');
+select public.seed_user('pranotibelapurkar@acropolis.in', 'Password@123', 'Dr. Pranoti Belapurkar', 'hod', 'Department Of Biosciences', 'Acropolis Institute of Management Studies and Research');
+select public.seed_user('smritijain@acropolis.in', 'Password@123', 'Dr. Smriti Jain', 'hod', 'Department Of Computer Science', 'Acropolis Institute of Management Studies and Research');
+select public.seed_user('sonalijain@acropolis.in', 'Password@123', 'Dr. Sonali Jain', 'hod', 'Department Of Commerce', 'Acropolis Institute of Management Studies and Research');
 select public.seed_user('poonam.singh@acropolis.in', 'Password@123', 'Dr. Poonam Singh', 'hod', 'Department of Humanities', 'Acropolis Institute of Management Studies and Research');
 
 -- Acropolis Faculty of Management & Research
-select public.seed_user('tarun.kushwaha@acropolis.in', 'Password@123', 'Dr. Tarun Kushwaha', 'hod', 'Management', 'Acropolis Faculty of Management & Research');
+select public.seed_user('tarunkushwaha@acropolis.in', 'Password@123', 'Dr. Tarun Kushwaha', 'hod', 'Management', 'Acropolis Faculty of Management & Research');
 
 -- Acropolis Institute of Law
-select public.seed_user('geetanjali.chandra@acropolis.in', 'Password@123', 'Dr. Geetanjali Chandra', 'hod', 'Law', 'Acropolis Institute of Law');
+select public.seed_user('principalail@acropolis.in', 'Password@123', 'Dr. Geetanjali Chandra', 'hod', 'Law', 'Acropolis Institute of Law');
 
 -- Acropolis Institute of Pharmaceutical Education and Research
-select public.seed_user('gn.darwhekar@acropolis.in', 'Password@123', 'Dr. G.N. Darwhekar', 'hod', 'Pharmacy', 'Acropolis Institute of Pharmaceutical Education and Research');
+select public.seed_user('principalaiper@acropolis.in', 'Password@123', 'Dr. G.N. Darwhekar', 'hod', 'Pharmacy', 'Acropolis Institute of Pharmaceutical Education and Research');
 
 -- Acropolis Institute of Technology and Research
-select public.seed_user('sc.sharma@acropolis.in', 'Password@123', 'Dr. S C SHARMA', 'hod', 'Director', 'Acropolis Institute of Technology and Research');
-select public.seed_user('kamal.sethi@acropolis.in', 'Password@123', 'Dr. Kamal K Sethi', 'hod', 'CSE', 'Acropolis Institute of Technology and Research');
-select public.seed_user('shilpa.bhalerao@acropolis.in', 'Password@123', 'Dr. Shilpa Bhalerao', 'hod', 'CSIT & CY', 'Acropolis Institute of Technology and Research');
-select public.seed_user('prashant.lakkadwala@acropolis.in', 'Password@123', 'Dr.(Prof.) Prashant Lakkadwala', 'hod', 'IT & DS', 'Acropolis Institute of Technology and Research');
-select public.seed_user('namrata.tapaswi@acropolis.in', 'Password@123', 'Dr. Namrata Tapaswi', 'hod', 'AIML', 'Acropolis Institute of Technology and Research');
-select public.seed_user('sk.sharma@acropolis.in', 'Password@123', 'Dr. S.K. Sharma', 'hod', 'Civil', 'Acropolis Institute of Technology and Research');
-select public.seed_user('hemant.marmat@acropolis.in', 'Password@123', 'Dr. Hemant Marmat', 'hod', 'MECH', 'Acropolis Institute of Technology and Research');
-select public.seed_user('ubs.chandrawat@acropolis.in', 'Password@123', 'Dr. U. B. S Chandrawat', 'hod', 'EC&VLSI&ACT', 'Acropolis Institute of Technology and Research');
-select public.seed_user('geeta.santhosh@acropolis.in', 'Password@123', 'Dr. Geeta Santhosh', 'hod', 'FCA', 'Acropolis Institute of Technology and Research');
-select public.seed_user('prashant.geete@acropolis.in', 'Password@123', 'Dr. Prashant Geete', 'hod', 'First Year', 'Acropolis Institute of Technology and Research');
-select public.seed_user('atul.bharat@acropolis.in', 'Password@123', 'Mr. Atul N Bharat', 'hod', 'Placement', 'Acropolis Institute of Technology and Research');
+select public.seed_user('directoraitr@acropolis.in', 'Password@123', 'Dr. S C SHARMA', 'hod', 'Director', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodcs@acropolis.in', 'Password@123', 'Dr. Kamal K Sethi', 'hod', 'CSE', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodcsit@acropolis.in', 'Password@123', 'Dr. Shilpa Bhalerao', 'hod', 'CSIT & CY', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodit@acropolis.in', 'Password@123', 'Dr.(Prof.) Prashant Lakkadwala', 'hod', 'IT & DS', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodaiml@acropolis.in', 'Password@123', 'Dr. Namrata Tapaswi', 'hod', 'AIML', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodce@acropolis.in', 'Password@123', 'Dr. S.K. Sharma', 'hod', 'Civil', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hemantmarmat@acropolis.in', 'Password@123', 'Dr. Hemant Marmat', 'hod', 'MECH', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodec@acropolis.in', 'Password@123', 'Dr. U. B. S Chandrawat', 'hod', 'EC&VLSI&ACT', 'Acropolis Institute of Technology and Research');
+select public.seed_user('hodfca@acropolis.in', 'Password@123', 'Dr. Geeta Santhosh', 'hod', 'FCA', 'Acropolis Institute of Technology and Research');
+select public.seed_user('prashantgeete@acropolis.in', 'Password@123', 'Dr. Prashant Geete', 'hod', 'First Year', 'Acropolis Institute of Technology and Research');
+select public.seed_user('atul@acropolis.in', 'Password@123', 'Mr. Atul N Bharat', 'hod', 'Placement', 'Acropolis Institute of Technology and Research');
 
 -- Cleanup function
 drop function public.seed_user;
