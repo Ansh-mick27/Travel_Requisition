@@ -55,6 +55,10 @@ export default function UserApprovals() {
                     {
                         text: 'OK',
                         onPress: () => {
+                            // Optimistic Update: Remove from list immediately
+                            setUsers(currentUsers => currentUsers.filter(user => user.id !== userId));
+
+                            // Re-fetch in background to ensure sync
                             setTimeout(() => {
                                 fetchPendingUsers();
                             }, 500);
@@ -120,7 +124,7 @@ export default function UserApprovals() {
             <Stack.Screen options={{ title: 'Pending Users', headerShown: true }} />
 
             <View style={styles.headerContainer}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
                 </TouchableOpacity>
                 <Text style={styles.pageTitle}>Pending Users</Text>

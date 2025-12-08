@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 import { Colors, Shadows } from '../../constants/theme';
@@ -40,9 +40,11 @@ export default function Approvals() {
         }
     };
 
-    useEffect(() => {
-        fetchRequests();
-    }, [role]);
+    useFocusEffect(
+        useCallback(() => {
+            fetchRequests();
+        }, [isHOD, isAdmin, user])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);

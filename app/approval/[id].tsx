@@ -123,7 +123,7 @@ export default function ApprovalDetail() {
             }
 
             Alert.alert('Success', `Request ${action}d successfully!`, [
-                { text: 'OK', onPress: () => router.back() }
+                { text: 'OK', onPress: () => router.replace('/(tabs)/approvals') }
             ]);
         } catch (error: any) {
             Alert.alert('Error', error.message);
@@ -143,7 +143,7 @@ export default function ApprovalDetail() {
             <Stack.Screen options={{ title: 'Review Request', headerShown: true }} />
 
             <View style={styles.headerContainer}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.replace('/(tabs)/approvals')} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
                 </TouchableOpacity>
                 <Text style={styles.pageTitle}>Review Request</Text>

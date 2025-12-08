@@ -62,7 +62,8 @@ export default function CreateRequest() {
             setSuggestionsFn(data);
             setShowFn(true);
         } catch (error) {
-            console.error('Error fetching suggestions:', error);
+            console.warn('Autocomplete unavailable (Network/CORS):', error);
+            setShowFn(false);
         }
     };
 
@@ -137,9 +138,30 @@ export default function CreateRequest() {
             });
 
             if (error) throw error;
-            Alert.alert('Success', 'Requisition created successfully!', [
-                { text: 'OK', onPress: () => router.replace('/(tabs)/history') }
-            ]);
+
+            // Reset Form Code
+            setDestination('');
+            setPickupLocation('');
+            setPurpose('meeting');
+            setPurposeDesc('');
+            setPickupDate(null);
+            setPickupTime(null);
+            setDropTime(null);
+            setGuestName('');
+            setGuestPhone('');
+
+            if (Platform.OS === 'web') {
+                const confirm = window.confirm('Success: Requisition created successfully! Go to History?');
+                if (confirm) {
+                    router.replace('/(tabs)/history');
+                } else {
+                    // Even if they stay, form is clear
+                }
+            } else {
+                Alert.alert('Success', 'Requisition created successfully!', [
+                    { text: 'OK', onPress: () => router.replace('/(tabs)/history') }
+                ]);
+            }
         } catch (error: any) {
             Alert.alert('Error', error.message);
         } finally {

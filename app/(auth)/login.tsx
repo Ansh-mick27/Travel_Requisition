@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AnimatedButton } from '../../components/ui/AnimatedButton';
 import { Card } from '../../components/ui/Card';
 import { Colors } from '../../constants/theme';
@@ -12,10 +12,12 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     async function signInWithEmail() {
+        setErrorMessage('');
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter both email and password.');
+            setErrorMessage('Please enter both email and password.');
             return;
         }
         setLoading(true);
@@ -24,7 +26,10 @@ export default function LoginScreen() {
             password: password,
         });
 
-        if (error) Alert.alert('Error', error.message);
+        if (error) {
+            setErrorMessage(error.message);
+            console.error('Login Error:', error);
+        }
         setLoading(false);
     }
 
@@ -74,6 +79,10 @@ export default function LoginScreen() {
                             />
                         </View>
                     </View>
+
+                    {errorMessage ? (
+                        <Text style={{ color: 'red', marginBottom: 10, textAlign: 'center' }}>{errorMessage}</Text>
+                    ) : null}
 
                     <AnimatedButton
                         title={loading ? "Signing in..." : "Sign In"}

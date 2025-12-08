@@ -16,40 +16,74 @@ export default function Dashboard() {
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ pending: 0, approved: 0, total: 0 });
     const [fleetStats, setFleetStats] = useState({ total: 0, booked: 0, free: 0 });
-
     const fetchStats = useCallback(async () => {
         if (!user) return;
 
-        // User Stats
-        const { data, error } = await supabase
-            .from('requisitions')
-            .select('status')
-            .eq('requester_id', user.id);
+        try {
+            // User Stats Logic
+            let pendingCount = 0;
+            let approvedCount = 0;
+            let totalCount = 0;
 
-        if (data && !error) {
-            const pending = data.filter(r => r.status.includes('pending')).length;
-            const approved = data.filter(r => r.status === 'approved').length;
-            setStats({ pending, approved, total: data.length });
+            if (role === 'admin') {
+                const { data } = await supabase.from('requisitions').select('status');
+                if (data) {
+                    // For Admin: "Pending" is strictly Pending Admin. 
+                    // "Approved" is Final Approved.
+                    pendingCount = data.filter(r => r.status === 'pending_admin').length;
+                    approvedCount = data.filter(r => r.status === 'approved').length;
+                    totalCount = data.length;
+                }
+            } else if (role === 'hod') {
+                const { data } = await supabase
+                    .from('requisitions')
+                    .select('*, profiles:requester_id(department)');
+
+                if (data) {
+                    const deptRequests = data.filter((r: any) => r.profiles?.department === user?.department);
+                    pendingCount = deptRequests.filter((r: any) => r.status === 'pending_hod').length;
+                    // For HOD: "Approved" means it passed their stage (pending_admin or approved)
+                    approvedCount = deptRequests.filter((r: any) => ['pending_admin', 'approved'].includes(r.status)).length;
+                    totalCount = deptRequests.length;
+                }
+            } else {
+                // Requester
+                const { data } = await supabase
+                    .from('requisitions')
+                    .select('status')
+                    .eq('requester_id', user.id);
+
+                if (data) {
+                    pendingCount = data.filter(r => r.status.includes('pending')).length;
+                    approvedCount = data.filter(r => r.status === 'approved').length;
+                    totalCount = data.length;
+                }
+            }
+            setStats({ pending: pendingCount, approved: approvedCount, total: totalCount });
+
+            // Fleet Stats (Global)
+            const { count: totalVehicles } = await supabase
+                .from('vehicles')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'active');
+
+            const today = new Date().toISOString().split('T')[0];
+            const { count: bookedVehicles } = await supabase
+                .from('requisitions')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved')
+                .gte('pickup_date', today);
+
+            setFleetStats({
+                total: totalVehicles || 0,
+                booked: bookedVehicles || 0,
+                free: (totalVehicles || 0) - (bookedVehicles || 0)
+            });
+
+        } catch (error) {
+            console.error('Error fetching stats:', error);
         }
-
-        // Fleet Stats (Global)
-        const { count: totalVehicles } = await supabase
-            .from('vehicles')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'active');
-
-        const today = new Date().toISOString().split('T')[0];
-        const { count: bookedVehicles } = await supabase
-            .from('requisitions')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'approved')
-            .gte('pickup_date', today); // Approximating booked as approved requests from today onwards
-
-        const total = totalVehicles || 0;
-        const booked = bookedVehicles || 0;
-        setFleetStats({ total, booked, free: total - booked });
-
-    }, [user]);
+    }, [user, role]);
 
     useEffect(() => {
         fetchStats();

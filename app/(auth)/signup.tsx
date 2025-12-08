@@ -19,8 +19,13 @@ export default function SignupScreen() {
     const [fullName, setFullName] = useState('');
 
     // Dropdown State
+    // Dropdown State
     const [selectedCollege, setSelectedCollege] = useState('');
     const [selectedDept, setSelectedDept] = useState('');
+    const [role, setRole] = useState('requester'); // Default to Requester
+
+    // New Fields
+    const [mobileNumber, setMobileNumber] = useState('');
 
     // Auto-filled State
     const [hodName, setHodName] = useState('');
@@ -55,7 +60,7 @@ export default function SignupScreen() {
     }, [selectedDept, selectedCollege]);
 
     async function handleSignUp() {
-        if (!email || !password || !fullName || !selectedDept || !selectedCollege) {
+        if (!email || !password || !fullName || !selectedDept || !selectedCollege || !mobileNumber) {
             Alert.alert('Error', 'Please fill in all required fields.');
             return;
         }
@@ -71,6 +76,8 @@ export default function SignupScreen() {
                     college_name: selectedCollege,
                     hod_name: hodName,
                     director_name: directorName,
+                    phone_number: mobileNumber,
+                    role: role,
                 },
             },
         });
@@ -123,7 +130,22 @@ export default function SignupScreen() {
                 <Card title="Personal Details">
                     {renderInput("Full Name", fullName, setFullName, "John Doe", "person-outline")}
                     {renderInput("Email Address", email, setEmail, "email@address.com", "mail-outline", false, "email-address")}
+                    {renderInput("Mobile Number", mobileNumber, setMobileNumber, "9876543210", "call-outline", false, "phone-pad")}
                     {renderInput("Password", password, setPassword, "Create a password", "lock-closed-outline", true)}
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Role</Text>
+                        <View style={styles.pickerWrapper}>
+                            <Picker
+                                selectedValue={role}
+                                onValueChange={(itemValue) => setRole(itemValue)}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Requester" value="requester" />
+                                <Picker.Item label="HOD" value="hod" />
+                            </Picker>
+                        </View>
+                    </View>
                 </Card>
 
                 <Card title="Academic Details">
