@@ -80,6 +80,14 @@ export default function Profile() {
                 )}
 
                 <AnimatedButton
+                    title="Edit Profile"
+                    onPress={() => Alert.alert('Edit Profile', 'Please contact support to update your profile details.')}
+                    variant="secondary"
+                    style={{ marginBottom: 12 }}
+                    icon={<Ionicons name="create-outline" size={20} color="#fff" style={{ marginRight: 8 }} />}
+                />
+
+                <AnimatedButton
                     title="Sign Out"
                     onPress={handleSignOut}
                     variant="outline"
