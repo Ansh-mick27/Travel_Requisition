@@ -13,8 +13,8 @@ export default function EditProfile() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
-    const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
-    const [phoneNumber, setPhoneNumber] = useState(user?.user_metadata?.phone_number || '');
+    const [fullName, setFullName] = useState(user?.full_name || '');
+    const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
 
     const handleUpdate = async () => {
         if (!fullName || !phoneNumber) {

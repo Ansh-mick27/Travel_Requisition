@@ -55,17 +55,17 @@ export default function Profile() {
                     </Text>
                 </View>
                 <Text style={styles.userName}>
-                    {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
+                    {user?.full_name || user?.email?.split('@')[0]}
                 </Text>
                 <View style={styles.roleBadge}>
-                    <Text style={styles.roleText}>{role?.toUpperCase()}</Text>
+                    <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
                 </View>
             </View>
 
             <Card title="Personal Information">
                 {renderInfoRow('mail-outline', 'Email Address', user?.email)}
-                {renderInfoRow('business-outline', 'Department', user?.user_metadata?.department)}
-                {renderInfoRow('school-outline', 'College', user?.user_metadata?.college_name)}
+                {renderInfoRow('business-outline', 'Department', user?.department)}
+                {renderInfoRow('school-outline', 'College', user?.college_name)}
             </Card>
 
             <View style={styles.actionsContainer}>
