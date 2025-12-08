@@ -81,7 +81,7 @@ export default function Profile() {
 
                 <AnimatedButton
                     title="Edit Profile"
-                    onPress={() => Alert.alert('Edit Profile', 'Please contact support to update your profile details.')}
+                    onPress={() => router.push('/edit-profile')}
                     variant="secondary"
                     style={{ marginBottom: 12 }}
                     icon={<Ionicons name="create-outline" size={20} color="#fff" style={{ marginRight: 8 }} />}

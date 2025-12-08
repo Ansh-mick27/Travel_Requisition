@@ -13,6 +13,7 @@ type AuthContextType = {
     isAdmin: boolean;
     isHOD: boolean;
     isDriver: boolean;
+    refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -82,6 +83,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const refreshProfile = async () => {
+        if (session?.user?.id) {
+            await fetchProfile(session.user.id);
+        }
+    };
+
     const value = {
         session,
         user,
@@ -90,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isAdmin: role === 'admin',
         isHOD: role === 'hod',
         isDriver: role === 'driver',
+        refreshProfile,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
