@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AnimatedButton } from '../../components/ui/AnimatedButton';
 import { Card } from '../../components/ui/Card';
@@ -38,6 +38,35 @@ export default function CreateRequest() {
     const [guestPhone, setGuestPhone] = useState('');
 
     const [vehicleType, setVehicleType] = useState('car');
+    const [vehicleOptions, setVehicleOptions] = useState<string[]>([]);
+
+    useEffect(() => {
+        fetchVehicles();
+    }, []);
+
+    const fetchVehicles = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('vehicles')
+                .select('name')
+                .eq('status', 'active');
+
+            if (error) throw error;
+
+            if (data) {
+                // Get unique names
+                const uniqueNames = Array.from(new Set(data.map(v => v.name)));
+                setVehicleOptions(uniqueNames);
+                if (uniqueNames.length > 0 && !uniqueNames.includes(vehicleType)) {
+                    setVehicleType(uniqueNames[0]);
+                }
+            }
+        } catch (error) {
+            console.log('Error fetching vehicles:', error);
+            // Fallback
+            setVehicleOptions(['Kia', 'Bolero', 'Nexon', 'Bus']);
+        }
+    };
 
     const typingTimeoutRef = useRef<any>(null);
 
@@ -149,6 +178,7 @@ export default function CreateRequest() {
             setDropTime(null);
             setGuestName('');
             setGuestPhone('');
+            setVehicleType(vehicleOptions[0] || 'car');
 
             if (Platform.OS === 'web') {
                 const confirm = window.confirm('Success: Requisition created successfully! Go to History?');
@@ -307,10 +337,13 @@ export default function CreateRequest() {
             <Card title="Vehicle Preference">
                 <View style={styles.pickerWrapper}>
                     <Picker selectedValue={vehicleType} onValueChange={setVehicleType}>
-                        <Picker.Item label="Kia" value="Kia" />
-                        <Picker.Item label="Bolero" value="Bolero" />
-                        <Picker.Item label="Nexon" value="Nexon" />
-                        <Picker.Item label="Bus" value="Bus" />
+                        {vehicleOptions.length > 0 ? (
+                            vehicleOptions.map((v, index) => (
+                                <Picker.Item key={index} label={v} value={v} />
+                            ))
+                        ) : (
+                            <Picker.Item label="Loading..." value="car" />
+                        )}
                     </Picker>
                 </View>
             </Card>
