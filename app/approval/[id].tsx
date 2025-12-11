@@ -38,11 +38,13 @@ export default function ApprovalDetail() {
     const [showVehicleModal, setShowVehicleModal] = useState(false);
     const [showDriverModal, setShowDriverModal] = useState(false);
 
+    // Debug State
+    const [debugLog, setDebugLog] = useState<any[]>([]);
+
     useEffect(() => {
         fetchRequestDetails();
     }, [id]);
 
-    // Fetch resources only after request details are loaded (need date/time for availability)
     useEffect(() => {
         if (isAdmin && request) {
             fetchVehicles();
@@ -106,7 +108,7 @@ export default function ApprovalDetail() {
             return;
         }
 
-        // 3. Filter out conflicts
+        // 3. Filter out conflicts and generate debug log
         let reqStart = parseDateTime(request.pickup_date, request.pickup_time);
         const reqEnd = parseDateTime(request.pickup_date, request.drop_time);
 
@@ -119,6 +121,8 @@ export default function ApprovalDetail() {
             reqStart = now;
         }
 
+        const currentLog: any[] = [];
+
         const availableVehicles = allVehicles.filter(v => {
             const hasConflict = conflicts?.some(booking => {
                 if (booking.assigned_vehicle_id !== v.id) return false;
@@ -129,12 +133,27 @@ export default function ApprovalDetail() {
                 // Check Overlap
                 // We strictly check: (NewStart < OldEnd) AND (NewEnd > OldStart)
                 const isOverlap = (reqStart < existingEnd) && (reqEnd > existingStart);
+
+                // Debugging for Bolero 3 (or any vehicle with conflicts)
+                if (isOverlap || v.name.includes('Bolero')) {
+                    currentLog.push({
+                        vehicle: v.name,
+                        start: reqStart.toLocaleTimeString(),
+                        end: reqEnd.toLocaleTimeString(),
+                        bookingStart: existingStart.toLocaleTimeString(),
+                        bookingEnd: existingEnd.toLocaleTimeString(),
+                        isOverlap,
+                        message: isOverlap ? 'BUSY' : 'FREE'
+                    });
+                }
+
                 return isOverlap;
             });
 
             return !hasConflict;
         });
 
+        setDebugLog(currentLog);
         setVehicles(availableVehicles);
     };
 
@@ -217,9 +236,33 @@ export default function ApprovalDetail() {
 
     return (
         <View style={styles.mainContainer}>
-            <Stack.Screen options={{ title: 'Review Request', headerShown: true, headerBackTitle: 'Back' }} />
+            {/* FORCE HIDE Native Header since user reported issues */}
+            <Stack.Screen options={{ headerShown: false }} />
+
+            {/* Custom Header with BACK capability */}
+            <View style={styles.headerContainer}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
+                </TouchableOpacity>
+                <Text style={styles.pageTitle}>Review Request</Text>
+            </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+                {/* DEBUG INFO: Only for Admin to diagnose 'Busy' issues */}
+                {isAdmin && debugLog.length > 0 && (
+                    <View style={{ padding: 10, backgroundColor: '#FEF2F2', marginBottom: 15, borderRadius: 8, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                        <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: 'bold', marginBottom: 5 }}>⚠️ DEBUG INFO (Take Screenshot)</Text>
+                        <Text style={{ fontSize: 10, color: '#4B5563' }}>Req Time: {request.pickup_time} - {request.drop_time}</Text>
+                        <Text style={{ fontSize: 10, color: '#4B5563', marginBottom: 5 }}>Current Time: {new Date().toLocaleTimeString()}</Text>
+                        {debugLog.map((log, i) => (
+                            <Text key={i} style={{ fontSize: 10, marginTop: 2, fontFamily: 'monospace' }}>
+                                [{log.vehicle}] {log.message} (Overlap: {log.isOverlap ? 'Yes' : 'No'})
+                            </Text>
+                        ))}
+                    </View>
+                )}
+
                 {/* Requester Details Card */}
                 <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.card}>
                     <View style={styles.cardHeader}>
