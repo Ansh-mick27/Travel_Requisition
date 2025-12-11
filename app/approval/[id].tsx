@@ -40,11 +40,15 @@ export default function ApprovalDetail() {
 
     useEffect(() => {
         fetchRequestDetails();
-        if (isAdmin) {
+    }, [id]);
+
+    // Fetch resources only after request details are loaded (need date/time for availability)
+    useEffect(() => {
+        if (isAdmin && request) {
             fetchVehicles();
             fetchDrivers();
         }
-    }, [id]);
+    }, [isAdmin, request]);
 
     const fetchRequestDetails = async () => {
         const { data, error } = await supabase
@@ -59,10 +63,57 @@ export default function ApprovalDetail() {
     };
 
     const fetchVehicles = async () => {
-        const { data } = await supabase.from('vehicles').select('*').eq('status', 'active');
-        if (data) setVehicles(data);
+        if (!request) return;
+
+        // 1. Fetch all active vehicles
+        const { data: allVehicles, error: vError } = await supabase
+            .from('vehicles')
+            .select('*')
+            .eq('status', 'active');
+
+        if (vError || !allVehicles) {
+            console.error('Error fetching vehicles:', vError);
+            return;
+        }
+
+        // 2. Fetch approved requisitions for the same date
+        const { data: conflicts, error: rError } = await supabase
+            .from('requisitions')
+            .select('assigned_vehicle_id, pickup_time, drop_time')
+            .eq('status', 'approved')
+            .eq('pickup_date', request.pickup_date);
+
+        if (rError) {
+            console.error('Error fetching conflicts:', rError);
+            setVehicles(allVehicles); // Fallback to showing all
+            return;
+        }
+
+        // 3. Filter out conflicts
+        // Request Times
+        const reqStart = new Date(`1970-01-01T${request.pickup_time}`);
+        const reqEnd = new Date(`1970-01-01T${request.drop_time}`);
+
+        const availableVehicles = allVehicles.filter(v => {
+            // Check if this vehicle has any conflicting booking
+            const hasConflict = conflicts?.some(booking => {
+                if (booking.assigned_vehicle_id !== v.id) return false;
+
+                const existingStart = new Date(`1970-01-01T${booking.pickup_time}`);
+                const existingEnd = new Date(`1970-01-01T${booking.drop_time}`);
+
+                // Overlap logic: (StartA < EndB) && (EndA > StartB)
+                return (reqStart < existingEnd) && (reqEnd > existingStart);
+            });
+
+            return !hasConflict;
+        });
+
+        setVehicles(availableVehicles);
     };
 
+    // Driver availability logic can be added similarly if needed, but user only asked for vehicle.
+    // Keeping fetchDrivers simple for now but ensuring it runs when request is ready.
     const fetchDrivers = async () => {
         const { data } = await supabase.from('drivers').select('*').eq('status', 'active');
         if (data) setDrivers(data);
