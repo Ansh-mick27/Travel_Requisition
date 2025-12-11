@@ -201,21 +201,23 @@ export default function CreateRequest() {
 
     // Date Restriction Logic
     const getMinDate = () => {
-        const today = new Date();
-        // If user is NOT HOD/Admin (i.e. Requester), restrict to tomorrow onwards
         // HOD/Director (role='hod' or 'admin') allowed same day
         const isPrivileged = user?.role === 'hod' || user?.role === 'admin';
-
-        if (isPrivileged) {
-            return today;
-        } else {
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            return tomorrow;
+        const d = new Date();
+        if (!isPrivileged) {
+            d.setDate(d.getDate() + 1); // Requesters: min date is tomorrow
         }
+        return d;
+    };
+
+    const getMaxDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + 3); // Everyone: max 3 days in advance
+        return d;
     };
 
     const minDate = getMinDate();
+    const maxDate = getMaxDate();
 
     const renderDateInput = (label: string, value: Date | null, onChange: (d: Date | null) => void, onPress: () => void, mode: 'date' | 'time', icon: any) => (
         <View style={styles.inputGroup}>
@@ -226,6 +228,7 @@ export default function CreateRequest() {
                     {React.createElement('input', {
                         type: mode,
                         min: mode === 'date' ? minDate.toISOString().split('T')[0] : undefined,
+                        max: mode === 'date' ? maxDate.toISOString().split('T')[0] : undefined,
                         value: value ? (mode === 'date' ? value.toISOString().split('T')[0] : value.toTimeString().slice(0, 5)) : '',
                         onChange: (e: any) => {
                             if (!e.target.value) {
@@ -374,6 +377,7 @@ export default function CreateRequest() {
                 <DateTimePicker
                     value={pickupDate || minDate}
                     minimumDate={minDate}
+                    maximumDate={maxDate}
                     mode="date"
                     display="default"
                     onChange={(e, d) => {
