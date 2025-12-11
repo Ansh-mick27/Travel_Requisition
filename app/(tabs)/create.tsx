@@ -11,7 +11,7 @@ import { useAuth } from '../../contexts/AuthProvider';
 import { supabase } from '../../lib/supabase';
 
 export default function CreateRequest() {
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
@@ -163,7 +163,7 @@ export default function CreateRequest() {
                 guest_name: guestName,
                 guest_phone: guestPhone,
                 vehicle_type: vehicleType,
-                status: (user?.role === 'hod' || user?.role === 'admin') ? 'pending_admin' : 'pending_hod',
+                status: (role === 'hod' || role === 'admin') ? 'pending_admin' : 'pending_hod',
             });
 
             if (error) throw error;
@@ -202,7 +202,7 @@ export default function CreateRequest() {
     // Date Restriction Logic
     const getMinDate = () => {
         // HOD/Director (role='hod' or 'admin') allowed same day
-        const isPrivileged = user?.role === 'hod' || user?.role === 'admin';
+        const isPrivileged = role === 'hod' || role === 'admin';
         const d = new Date();
         if (!isPrivileged) {
             d.setDate(d.getDate() + 1); // Requesters: min date is tomorrow
