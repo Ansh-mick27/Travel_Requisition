@@ -199,6 +199,24 @@ export default function CreateRequest() {
         }
     };
 
+    // Date Restriction Logic
+    const getMinDate = () => {
+        const today = new Date();
+        // If user is NOT HOD/Admin (i.e. Requester), restrict to tomorrow onwards
+        // HOD/Director (role='hod' or 'admin') allowed same day
+        const isPrivileged = user?.role === 'hod' || user?.role === 'admin';
+
+        if (isPrivileged) {
+            return today;
+        } else {
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return tomorrow;
+        }
+    };
+
+    const minDate = getMinDate();
+
     const renderDateInput = (label: string, value: Date | null, onChange: (d: Date | null) => void, onPress: () => void, mode: 'date' | 'time', icon: any) => (
         <View style={styles.inputGroup}>
             <Text style={styles.label}>{label}</Text>
@@ -207,6 +225,7 @@ export default function CreateRequest() {
                     <Ionicons name={icon} size={20} color={Colors.light.primary} style={styles.icon} />
                     {React.createElement('input', {
                         type: mode,
+                        min: mode === 'date' ? minDate.toISOString().split('T')[0] : undefined,
                         value: value ? (mode === 'date' ? value.toISOString().split('T')[0] : value.toTimeString().slice(0, 5)) : '',
                         onChange: (e: any) => {
                             if (!e.target.value) {
@@ -353,7 +372,8 @@ export default function CreateRequest() {
             {/* Native Date Pickers */}
             {showDatePicker && Platform.OS !== 'web' && (
                 <DateTimePicker
-                    value={pickupDate || new Date()}
+                    value={pickupDate || minDate}
+                    minimumDate={minDate}
                     mode="date"
                     display="default"
                     onChange={(e, d) => {
