@@ -24,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
     isAdmin: false,
     isHOD: false,
     isDriver: false,
+    refreshProfile: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);

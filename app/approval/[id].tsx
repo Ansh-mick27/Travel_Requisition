@@ -360,7 +360,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E2E8F0',
         borderRadius: 12,
-        overflow: 'hidden',
         backgroundColor: '#F8FAFC',
     },
     picker: {
