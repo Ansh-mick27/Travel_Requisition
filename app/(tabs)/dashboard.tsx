@@ -67,17 +67,46 @@ export default function Dashboard() {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'active');
 
+            // Fleet Stats (Global) with PRECISE Availability
+            // totalVehicles is already fetched above at line 65
+
             const today = new Date().toISOString().split('T')[0];
-            const { count: bookedVehicles } = await supabase
+
+            // Get all trips for today to check precise overlap
+            const { data: rawTrips } = await supabase
                 .from('requisitions')
-                .select('*', { count: 'exact', head: true })
+                .select('pickup_date, pickup_time, drop_time')
                 .eq('status', 'approved')
-                .gte('pickup_date', today);
+                .gte('pickup_date', today); // Fetch futur trips too if needed, but mainly today
+
+            // parseDateTime helper
+            const parseDateTime = (dateStr: string, timeStr: string) => {
+                try {
+                    const [y, m, d] = dateStr.split('-').map(Number);
+                    const timeParts = timeStr.split(':');
+                    const hours = Number(timeParts[0]);
+                    const minutes = Number(timeParts[1]);
+                    const seconds = timeParts[2] ? Number(timeParts[2]) : 0;
+                    return new Date(y, m - 1, d, hours, minutes, seconds);
+                } catch (e) {
+                    return new Date(`${dateStr}T${timeStr}`);
+                }
+            };
+
+            let bookedCount = 0;
+            if (rawTrips) {
+                const now = new Date();
+                bookedCount = rawTrips.filter(t => {
+                    let start = parseDateTime(t.pickup_date, t.pickup_time);
+                    const end = parseDateTime(t.pickup_date, t.drop_time);
+                    return (now >= start && now <= end);
+                }).length;
+            }
 
             setFleetStats({
                 total: totalVehicles || 0,
-                booked: bookedVehicles || 0,
-                free: (totalVehicles || 0) - (bookedVehicles || 0)
+                booked: bookedCount,
+                free: (totalVehicles || 0) - bookedCount
             });
 
         } catch (error) {
@@ -87,6 +116,13 @@ export default function Dashboard() {
 
     useEffect(() => {
         fetchStats();
+
+        // Real-time update check every 60s
+        const interval = setInterval(() => {
+            fetchStats();
+        }, 60000);
+
+        return () => clearInterval(interval);
     }, [fetchStats]);
 
     const onRefresh = async () => {

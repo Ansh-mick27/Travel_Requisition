@@ -125,36 +125,61 @@ export default function CreateRequest() {
         }
     };
 
-    const validateBuffer = () => {
-        if (!pickupTime || !dropTime) return false;
-        const start = pickupTime.getTime();
-        const end = dropTime.getTime();
-        const diffInHours = (end - start) / (1000 * 60 * 60);
+    const validateBuffer = (pTime: Date, dTime: Date) => {
+        const start = pTime.getTime();
+        const end = dTime.getTime();
+        const diffInMinutes = (end - start) / (1000 * 60);
 
-        if (diffInHours < 1) {
-            Alert.alert('Invalid Time', 'Drop time must be at least 1 hour after pick-up time.');
+        if (diffInMinutes <= 0) {
+            const msg = 'Drop time must be after pick-up time.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Invalid Time', msg);
             return false;
         }
         return true;
     };
 
     const handleSubmit = async () => {
-        if (!user) return Alert.alert('Error', 'User session not found.');
+
+        if (!user) {
+            console.error('Validation Failed: User session missing');
+            const msg = 'User session not found.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
+            return;
+        }
+
         if (!destination || !pickupLocation || !category || !pickupDate || !pickupTime || !dropTime) {
-            return Alert.alert('Missing Fields', 'Please fill in all required fields.');
+            console.error('Validation Failed: Missing required fields');
+            const msg = 'Please fill in all required fields.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Missing Fields', msg);
+            return;
         }
+
         if ((category === 'VIP Guest' || category === 'Guest') && (!guestName || !guestPhone)) {
-            return Alert.alert('Missing details', 'Please provide Guest Name and Phone Number.');
+            console.error('Validation Failed: Missing guest details');
+            const msg = 'Please provide Guest Name and Phone Number.';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
+            return;
         }
-        if (!validateBuffer()) return;
+
+        // Normalize Dates
+        // Validating time buffer requires combining the Date + Time
+        const fullPickup = new Date(pickupDate);
+        fullPickup.setHours(pickupTime.getHours(), pickupTime.getMinutes(), 0, 0);
+
+        const fullDrop = new Date(pickupDate);
+        fullDrop.setHours(dropTime.getHours(), dropTime.getMinutes(), 0, 0);
+
+        if (!validateBuffer(fullPickup, fullDrop)) {
+            return;
+        }
 
         setLoading(true);
         try {
             const { error } = await supabase.from('requisitions').insert({
                 requester_id: user.id,
                 pickup_date: pickupDate.toISOString().split('T')[0],
-                pickup_time: pickupTime.toLocaleTimeString('en-US', { hour12: false }),
-                drop_time: dropTime.toLocaleTimeString('en-US', { hour12: false }),
+                pickup_time: fullPickup.toLocaleTimeString('en-US', { hour12: false }),
+                drop_time: fullDrop.toLocaleTimeString('en-US', { hour12: false }),
                 destination,
                 pickup_location: pickupLocation,
                 purpose,
@@ -181,19 +206,21 @@ export default function CreateRequest() {
             setVehicleType(vehicleOptions[0] || 'car');
 
             if (Platform.OS === 'web') {
-                const confirm = window.confirm('Success: Requisition created successfully! Go to History?');
-                if (confirm) {
-                    router.replace('/(tabs)/history');
-                } else {
-                    // Even if they stay, form is clear
-                }
+                // Use setTimeout to allow UI to update if needed
+                setTimeout(() => {
+                    if (window.confirm('Success: Requisition created successfully! Go to History?')) {
+                        router.replace('/(tabs)/history');
+                    }
+                }, 100);
             } else {
                 Alert.alert('Success', 'Requisition created successfully!', [
                     { text: 'OK', onPress: () => router.replace('/(tabs)/history') }
                 ]);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message);
+            console.error(error);
+            const msg = error.message || 'Submission failed';
+            Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Error', msg);
         } finally {
             setLoading(false);
         }

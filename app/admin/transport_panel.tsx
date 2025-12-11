@@ -11,7 +11,32 @@ import { supabase } from '../../lib/supabase';
 const AnalyticsDashboard = ({ vehicles, drivers, todayTrips, driverTripCounts }: { vehicles: any[], drivers: any[], todayTrips: any[], driverTripCounts: Record<string, number> }) => {
     // 1. Fleet Utilization
     const totalVehicles = vehicles.length;
-    const busyVehicles = vehicles.filter(v => todayTrips.find(t => t.assigned_vehicle_id === v.id)).length;
+
+    // parseDateTime helper (Duplicate but needed for standalone component, or move to utility)
+    const parseDateTime = (dateStr: string, timeStr: string) => {
+        try {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const timeParts = timeStr.split(':');
+            const hours = Number(timeParts[0]);
+            const minutes = Number(timeParts[1]);
+            const seconds = timeParts[2] ? Number(timeParts[2]) : 0;
+            return new Date(y, m - 1, d, hours, minutes, seconds);
+        } catch (e) {
+            return new Date(`${dateStr}T${timeStr}`);
+        }
+    };
+
+    const busyVehicles = vehicles.filter(v => {
+        const now = new Date();
+        const activeTrip = todayTrips.find(t => {
+            if (t.assigned_vehicle_id !== v.id) return false;
+            let start = parseDateTime(t.pickup_date, t.pickup_time);
+            const end = parseDateTime(t.pickup_date, t.drop_time);
+            return (now >= start && now <= end);
+        });
+        return !!activeTrip;
+    }).length;
+
     const utilizationRate = totalVehicles > 0 ? (busyVehicles / totalVehicles) * 100 : 0;
 
     // 2. Top Driver
@@ -45,7 +70,7 @@ const AnalyticsDashboard = ({ vehicles, drivers, todayTrips, driverTripCounts }:
                 {/* Active Trips Badge */}
                 <Card style={[styles.statCard, { flex: 1, marginRight: 8 }]}>
                     <Text style={styles.statCardLabel}>Active Trips</Text>
-                    <Text style={styles.statCardValue}>{todayTrips.length}</Text>
+                    <Text style={styles.statCardValue}>{busyVehicles}</Text>
                     <Ionicons name="pulse" size={16} color={Colors.light.primary} style={styles.statIcon} />
                 </Card>
 
@@ -121,6 +146,13 @@ export default function TransportPanel() {
 
     useEffect(() => {
         fetchData();
+
+        // Auto-refresh every 60 seconds to update time-sensitive status
+        const interval = setInterval(() => {
+            fetchData();
+        }, 60000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const onRefresh = async () => {
@@ -217,9 +249,43 @@ export default function TransportPanel() {
 
     // --- Renderers ---
 
+    // parseDateTime helper (Manual Parsing for stability)
+    const parseDateTime = (dateStr: string, timeStr: string) => {
+        try {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const timeParts = timeStr.split(':');
+            const hours = Number(timeParts[0]);
+            const minutes = Number(timeParts[1]);
+            const seconds = timeParts[2] ? Number(timeParts[2]) : 0;
+            return new Date(y, m - 1, d, hours, minutes, seconds);
+        } catch (e) {
+            return new Date(`${dateStr}T${timeStr}`);
+        }
+    };
+
     const renderVehicleCard = ({ item, index }: { item: any, index: number }) => {
-        const trip = todayTrips.find(t => t.assigned_vehicle_id === item.id);
-        const isAvailable = !trip;
+        // Find if any trip is CURRENTLY active or FUTURE today
+        // But for "Status: Free/Busy", we care if it is busy RIGHT NOW.
+
+        const now = new Date();
+        const activeTrip = todayTrips.find(t => {
+            if (t.assigned_vehicle_id !== item.id) return false;
+
+            // Logic: Is "Now" inside the trip window?
+            let start = parseDateTime(t.pickup_date, t.pickup_time);
+            const end = parseDateTime(t.pickup_date, t.drop_time);
+
+            // Pragmatic Start Check (Same as Approval Screen)
+            // If the trip is today, and start time was in the past, effectively it started "at start time".
+            // But if we are checking "Is it busy NOW?", we just check: Start <= Now <= End
+
+            // However, to align with the "Pragmatic" availability logic:
+            // If a trip ended at 10:00 AM, and it's 12:00 PM, it should be FREE.
+
+            return (now >= start && now <= end);
+        });
+
+        const isAvailable = !activeTrip;
 
         return (
             <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
@@ -239,11 +305,16 @@ export default function TransportPanel() {
                         </View>
                         <RowActions onEdit={() => handleEdit(item)} onDelete={() => handleDelete(item.id, item.name)} />
                     </View>
-                    {!isAvailable && trip && (
+                    {!isAvailable && activeTrip && (
                         <View style={styles.tripInfo}>
                             <View style={styles.divider} />
-                            <Text style={styles.label}>Creating Trip:</Text>
-                            <Text style={styles.infoText}>{trip.profiles?.full_name} • {trip.destination}</Text>
+                            <Text style={styles.label}>Currently On Trip:</Text>
+                            <Text style={styles.infoText}>
+                                {activeTrip.profiles?.full_name} • {activeTrip.destination}
+                            </Text>
+                            <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                                Since {activeTrip.pickup_time}
+                            </Text>
                         </View>
                     )}
                 </Card>
