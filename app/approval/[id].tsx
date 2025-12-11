@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
@@ -35,6 +34,8 @@ export default function ApprovalDetail() {
     const [selectedVehicle, setSelectedVehicle] = useState('');
     const [drivers, setDrivers] = useState<any[]>([]);
     const [selectedDriver, setSelectedDriver] = useState('');
+    const [showVehicleModal, setShowVehicleModal] = useState(false);
+    const [showDriverModal, setShowDriverModal] = useState(false);
 
     useEffect(() => {
         fetchRequestDetails();
@@ -194,33 +195,54 @@ export default function ApprovalDetail() {
                             <Text style={styles.cardTitle}>Assignment</Text>
                         </View>
                         <View style={styles.cardBody}>
+                            {/* Vehicle Selection */}
                             <Text style={styles.inputLabel}>Assign Vehicle</Text>
-                            <View style={styles.pickerWrapper}>
-                                <Picker
-                                    selectedValue={selectedVehicle}
-                                    onValueChange={(itemValue: string) => setSelectedVehicle(itemValue)}
-                                    style={styles.picker}
-                                >
-                                    <Picker.Item label="Select Vehicle" value="" enabled={false} />
-                                    {vehicles.map(v => (
-                                        <Picker.Item key={v.id} label={`${v.name} (${v.type})`} value={v.id} />
-                                    ))}
-                                </Picker>
-                            </View>
+                            <TouchableOpacity
+                                style={styles.pickerButton}
+                                onPress={() => setShowVehicleModal(true)}
+                            >
+                                <Text style={[styles.pickerButtonText, !selectedVehicle && styles.placeholderText]}>
+                                    {selectedVehicle
+                                        ? (() => {
+                                            const v = vehicles.find(v => v.id === selectedVehicle);
+                                            return `${v?.name} (${v?.type})`;
+                                        })()
+                                        : 'Select Vehicle'}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#64748B" />
+                            </TouchableOpacity>
 
+                            <SelectionModal
+                                visible={showVehicleModal}
+                                title="Select Vehicle"
+                                options={vehicles.map(v => ({ label: `${v.name} (${v.type})`, value: v.id }))}
+                                onSelect={setSelectedVehicle}
+                                onClose={() => setShowVehicleModal(false)}
+                                selectedValue={selectedVehicle}
+                            />
+
+                            {/* Driver Selection */}
                             <Text style={[styles.inputLabel, { marginTop: 15 }]}>Assign Driver</Text>
-                            <View style={styles.pickerWrapper}>
-                                <Picker
-                                    selectedValue={selectedDriver}
-                                    onValueChange={(itemValue: string) => setSelectedDriver(itemValue)}
-                                    style={styles.picker}
-                                >
-                                    <Picker.Item label="Select Driver" value="" enabled={false} />
-                                    {drivers.map(d => (
-                                        <Picker.Item key={d.id} label={d.full_name} value={d.id} />
-                                    ))}
-                                </Picker>
-                            </View>
+                            <TouchableOpacity
+                                style={styles.pickerButton}
+                                onPress={() => setShowDriverModal(true)}
+                            >
+                                <Text style={[styles.pickerButtonText, !selectedDriver && styles.placeholderText]}>
+                                    {selectedDriver
+                                        ? drivers.find(d => d.id === selectedDriver)?.full_name
+                                        : 'Select Driver'}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#64748B" />
+                            </TouchableOpacity>
+
+                            <SelectionModal
+                                visible={showDriverModal}
+                                title="Select Driver"
+                                options={drivers.map(d => ({ label: d.full_name, value: d.id }))}
+                                onSelect={setSelectedDriver}
+                                onClose={() => setShowDriverModal(false)}
+                                selectedValue={selectedDriver}
+                            />
                         </View>
                     </Animated.View>
                 )}
@@ -356,15 +378,23 @@ const styles = StyleSheet.create({
         color: '#475569',
         marginBottom: 8,
     },
-    pickerWrapper: {
+    pickerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#E2E8F0',
         borderRadius: 12,
-        backgroundColor: '#F8FAFC',
-    },
-    picker: {
-        width: '100%',
+        paddingHorizontal: 15,
         height: 50,
+    },
+    pickerButtonText: {
+        fontSize: 16,
+        color: '#1E293B',
+    },
+    placeholderText: {
+        color: '#64748B',
     },
     textArea: {
         padding: 16,
