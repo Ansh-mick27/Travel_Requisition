@@ -91,18 +91,34 @@ export default function ApprovalDetail() {
 
         // 3. Filter out conflicts
         // Request Times
-        const reqStart = new Date(`1970-01-01T${request.pickup_time}`);
-        const reqEnd = new Date(`1970-01-01T${request.drop_time}`);
+        // Helper
+        const parseTime = (d: string, t: string) => {
+            try {
+                const dt = new Date(`${d}T${t}`);
+                if (!isNaN(dt.getTime())) return dt;
+                const dt2 = new Date(`${d} ${t}`);
+                if (!isNaN(dt2.getTime())) return dt2;
+                return new Date();
+            } catch { return new Date(); }
+        };
+
+        let reqStart = parseTime(request.pickup_date, request.pickup_time);
+        const reqEnd = parseTime(request.pickup_date, request.drop_time);
+
+        // Pragmatic Start: If today, don't check conflicts in the past relative to now.
+        const now = new Date();
+        const isToday = new Date(request.pickup_date).toDateString() === now.toDateString();
+        if (isToday && reqStart < now) {
+            reqStart = now;
+        }
 
         const availableVehicles = allVehicles.filter(v => {
-            // Check if this vehicle has any conflicting booking
             const hasConflict = conflicts?.some(booking => {
                 if (booking.assigned_vehicle_id !== v.id) return false;
 
-                const existingStart = new Date(`1970-01-01T${booking.pickup_time}`);
-                const existingEnd = new Date(`1970-01-01T${booking.drop_time}`);
+                const existingStart = parseTime(request.pickup_date, booking.pickup_time);
+                const existingEnd = parseTime(request.pickup_date, booking.drop_time);
 
-                // Overlap logic: (StartA < EndB) && (EndA > StartB)
                 return (reqStart < existingEnd) && (reqEnd > existingStart);
             });
 
