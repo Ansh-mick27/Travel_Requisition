@@ -108,6 +108,15 @@ export default function TransportPanel() {
     // Driver Form
     const [driverForm, setDriverForm] = useState({ full_name: '', phone_number: '' });
 
+    // Trip Edit Form
+    const [tripEditVisible, setTripEditVisible] = useState(false);
+    const [tripEditForm, setTripEditForm] = useState({
+        id: '',
+        pickup_date: '',
+        pickup_time: '',
+        drop_time: ''
+    });
+
     const fetchData = async () => {
         setLoading(true);
 
@@ -247,6 +256,36 @@ export default function TransportPanel() {
         }
     };
 
+    const handleTripEdit = (trip: any) => {
+        setTripEditForm({
+            id: trip.id,
+            pickup_date: trip.pickup_date,
+            pickup_time: trip.pickup_time,
+            drop_time: trip.drop_time
+        });
+        setTripEditVisible(true);
+    };
+
+    const submitTripEdit = async () => {
+        try {
+            const { error } = await supabase
+                .from('requisitions')
+                .update({
+                    pickup_time: tripEditForm.pickup_time,
+                    drop_time: tripEditForm.drop_time
+                    // Note: Date editing could be added here if needed, keeping it simple for now
+                })
+                .eq('id', tripEditForm.id);
+
+            if (error) throw error;
+            Alert.alert('Success', 'Trip times updated.');
+            setTripEditVisible(false);
+            fetchData();
+        } catch (e: any) {
+            Alert.alert('Error', e.message);
+        }
+    };
+
     // --- Renderers ---
 
     // parseDateTime helper (Manual Parsing for stability)
@@ -308,12 +347,20 @@ export default function TransportPanel() {
                     {!isAvailable && activeTrip && (
                         <View style={styles.tripInfo}>
                             <View style={styles.divider} />
-                            <Text style={styles.label}>Currently On Trip:</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={styles.label}>Currently On Trip:</Text>
+                                <TouchableOpacity onPress={() => handleTripEdit(activeTrip)} style={{ padding: 4 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', padding: 4, borderRadius: 4 }}>
+                                        <Ionicons name="time-outline" size={14} color={Colors.light.primary} />
+                                        <Text style={{ fontSize: 10, color: Colors.light.primary, fontWeight: '600' }}>Edit Time</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
                             <Text style={styles.infoText}>
                                 {activeTrip.profiles?.full_name} • {activeTrip.destination}
                             </Text>
                             <Text style={{ fontSize: 10, color: '#94A3B8' }}>
-                                Since {activeTrip.pickup_time}
+                                {activeTrip.pickup_time} - {activeTrip.drop_time}
                             </Text>
                         </View>
                     )}
@@ -490,6 +537,48 @@ export default function TransportPanel() {
                             </TouchableOpacity>
                             <TouchableOpacity onPress={handleSubmit} style={styles.saveBtn}>
                                 <Text style={styles.saveText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Trip Time Edit Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={tripEditVisible}
+                onRequestClose={() => setTripEditVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Update Trip Time</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 20, textAlign: 'center' }}>
+                            Adjusting time for active/approved trip.
+                        </Text>
+
+                        <Text style={styles.inputLabel}>Pickup Time (HH:MM:SS)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={tripEditForm.pickup_time}
+                            onChangeText={t => setTripEditForm({ ...tripEditForm, pickup_time: t })}
+                            placeholder="e.g. 10:30:00"
+                        />
+
+                        <Text style={styles.inputLabel}>Drop Time (HH:MM:SS)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={tripEditForm.drop_time}
+                            onChangeText={t => setTripEditForm({ ...tripEditForm, drop_time: t })}
+                            placeholder="e.g. 11:30:00"
+                        />
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity onPress={() => setTripEditVisible(false)} style={styles.cancelBtn}>
+                                <Text style={styles.cancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={submitTripEdit} style={styles.saveBtn}>
+                                <Text style={styles.saveText}>Update Time</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

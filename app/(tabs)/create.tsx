@@ -188,7 +188,9 @@ export default function CreateRequest() {
                 guest_name: guestName,
                 guest_phone: guestPhone,
                 vehicle_type: vehicleType,
-                status: (role === 'hod' || role === 'admin') ? 'pending_admin' : 'pending_hod',
+                // STATUS CHANGE: Flattened flow. All requests go directly to Admin/Director 
+                // (represented by 'pending_admin'), skipping HOD approval.
+                status: 'pending_admin',
             });
 
             if (error) throw error;

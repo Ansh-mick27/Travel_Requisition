@@ -62,5 +62,14 @@ export const COLLEGES: College[] = [
                 director_name: "Mr. Atul N Bharat" // Override for Placement
             }
         ]
-    }
+        ]
+    },
+{
+    name: "Other / Management",
+        director_name: "Management",
+            departments: [
+                { name: "Management", hod_name: "Management" },
+                { name: "Other", hod_name: "Other" }
+            ]
+}
 ];
