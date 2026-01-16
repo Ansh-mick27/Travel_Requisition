@@ -202,31 +202,44 @@ export default function TransportPanel() {
         setModalVisible(true);
     };
 
-    const handleDelete = (id: string, name: string) => {
-        Alert.alert(
-            'Confirm Delete',
-            `Are you sure you want to remove ${name}?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        const table = activeTab === 'vehicles' ? 'vehicles' : 'drivers';
-                        console.log('Deleting from table:', table, 'ID:', id);
-                        const { error } = await supabase.from(table).delete().eq('id', id);
-                        if (error) {
-                            console.error('Delete error:', error);
-                            Alert.alert('Error', error.message);
-                        } else {
-                            console.log('Delete successful');
-                            Alert.alert('Success', 'Item removed.');
-                            await fetchData();
-                        }
-                    }
-                }
-            ]
-        );
+    const handleDelete = async (id: string, name: string) => {
+        // Web-compatible confirmation
+        const confirmed = Platform.OS === 'web'
+            ? window.confirm(`Are you sure you want to remove ${name}?`)
+            : await new Promise((resolve) => {
+                Alert.alert(
+                    'Confirm Delete',
+                    `Are you sure you want to remove ${name}?`,
+                    [
+                        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                        { text: 'Delete', style: 'destructive', onPress: () => resolve(true) }
+                    ]
+                );
+            });
+
+        if (!confirmed) return;
+
+        const table = activeTab === 'vehicles' ? 'vehicles' : 'drivers';
+        console.log('Deleting from table:', table, 'ID:', id);
+
+        const { error } = await supabase.from(table).delete().eq('id', id);
+
+        if (error) {
+            console.error('Delete error:', error);
+            if (Platform.OS === 'web') {
+                window.alert(`Error: ${error.message}`);
+            } else {
+                Alert.alert('Error', error.message);
+            }
+        } else {
+            console.log('Delete successful');
+            if (Platform.OS === 'web') {
+                window.alert('Item removed successfully!');
+            } else {
+                Alert.alert('Success', 'Item removed.');
+            }
+            await fetchData();
+        }
     };
 
     const handleSubmit = async () => {
