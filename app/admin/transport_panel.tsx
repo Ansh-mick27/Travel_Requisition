@@ -213,11 +213,15 @@ export default function TransportPanel() {
                     style: 'destructive',
                     onPress: async () => {
                         const table = activeTab === 'vehicles' ? 'vehicles' : 'drivers';
+                        console.log('Deleting from table:', table, 'ID:', id);
                         const { error } = await supabase.from(table).delete().eq('id', id);
-                        if (error) Alert.alert('Error', error.message);
-                        else {
+                        if (error) {
+                            console.error('Delete error:', error);
+                            Alert.alert('Error', error.message);
+                        } else {
+                            console.log('Delete successful');
                             Alert.alert('Success', 'Item removed.');
-                            fetchData();
+                            await fetchData();
                         }
                     }
                 }
