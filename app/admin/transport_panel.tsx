@@ -226,33 +226,47 @@ export default function TransportPanel() {
     };
 
     const handleSubmit = async () => {
-        let result;
         if (activeTab === 'vehicles') {
             if (!vehicleForm.name) return Alert.alert('Error', 'Name is required');
             const payload = { ...vehicleForm, capacity: parseInt(vehicleForm.capacity) || 4, status: 'active' };
 
+            console.log('Submitting vehicle payload:', payload);
+
+            let result;
             if (isEditing && currentId) {
                 result = await supabase.from('vehicles').update(payload).eq('id', currentId);
             } else {
                 result = await supabase.from('vehicles').insert(payload);
             }
+
+            console.log('Supabase result:', result);
+
+            if (result.error) {
+                console.error('Error saving vehicle:', result.error);
+                Alert.alert('Error', result.error.message);
+            } else {
+                Alert.alert('Success', 'Saved successfully.');
+                setModalVisible(false);
+                await fetchData();
+            }
         } else {
             if (!driverForm.full_name) return Alert.alert('Error', 'Name is required');
             const payload = { ...driverForm, status: 'active' };
 
+            let result;
             if (isEditing && currentId) {
                 result = await supabase.from('drivers').update(payload).eq('id', currentId);
             } else {
                 result = await supabase.from('drivers').insert(payload);
             }
-        }
 
-        if (result.error) {
-            Alert.alert('Error', result.error.message);
-        } else {
-            Alert.alert('Success', 'Saved successfully.');
-            setModalVisible(false);
-            fetchData();
+            if (result.error) {
+                Alert.alert('Error', result.error.message);
+            } else {
+                Alert.alert('Success', 'Saved successfully.');
+                setModalVisible(false);
+                await fetchData();
+            }
         }
     };
 
